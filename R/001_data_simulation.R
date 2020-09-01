@@ -8,10 +8,14 @@
 #' @param num_active_regions The number of nonzero regions in the tensor coefficient
 #' @param obs.var The observation variance (a scalar)
 #'
-#' @return
+#' @importFrom neuRosim specifyregion specifydesign
+#' @import stats
+#'
+#' @return A list with objects \code{Y} (the tensor-valued response), \code{x} (the matrix-valued covariate), \code{true_betas} (the array of true tensor coefficient values), and \code{true_k} the true value for the autocorrelation coefficient.
 #' @export
 #'
 #' @examples
+#' input <- TRR_simulated_data()
 TRR_simulated_data <-
   function(subjects = 1,
            n.time = 200,
@@ -20,11 +24,10 @@ TRR_simulated_data <-
            k = 0.3,
            num_active_regions = 1,
            obs.var = 1) {
-    require(neuRosim)
-
+    requireNamespace("neuRosim")
     # Create a signal region
     betas <- sapply(seq(num_active_regions), function(nr) {
-      active_image <- specifyregion(dim = margin_sizes,
+      active_image <- neuRosim::specifyregion(dim = margin_sizes,
                                     coord = margin_sizes * runif(length(margin_sizes)),
                                     radius = min(round(min(margin_sizes) *
                                                          0.1), sample(3:5, 1)),
@@ -36,7 +39,7 @@ TRR_simulated_data <-
     betas <- betas * CNR * sqrt(obs.var)
     # Create a task covariate
     x <-
-      specifydesign(
+      neuRosim::specifydesign(
         onsets = seq(0.1 * n.time, 0.9 * n.time, length.out = 5),
         durations = 1,
         totaltime = n.time,

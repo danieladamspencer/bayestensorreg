@@ -11,4 +11,9 @@ Depends:
 Encoding: UTF-8
 LazyData: true
 Imports:
-    neuRosim
+    neuRosim,
+    GIGrvg,
+    mvtnorm,
+    truncnorm,
+    stats
+RoxygenNote: 7.1.1

@@ -1,0 +1,78 @@
+---
+title: "Bayesian Tensor Response Regression Vignette"
+author: "Dan Spencer"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Bayesian Tensor Response Regression
+
+In an effort to make the `bayestensorreg` package more accessible, this vignette
+will cover basic data simulation and analysis of tensor response regression 
+data, as discussed in Guhaniyogi and Spencer (2020). The basic structure of the
+data to which these functions apply is a response tensor `Y` of dimension $D+2$, 
+in which the first $D$ indices describe a datum's location in (discrete) 
+space, the $(D+1)$th index describes a datum's location in time, and the 
+$(D+2)$th index describes which subject a datum corresponds to. As this first 
+set of functions is meant for single-subject data, the $(D+2)$th index will
+always take a value of 1. The design matrix `x` is a $T \times n$ matrix, in 
+which the rows correspond to the time and the columns refer to the subject for
+the covariate value. This **should** be updated in the future to cover cases 
+with more than one covariate.
+
+## Data Generation
+
+Here we will simulate a dataset in which a single subject is monitored for 200 time steps. We could say that the 
+
+```{r Data Generation}
+library(bayestensorreg)
+set.seed(95064)
+simulated_data <-
+  TRR_simulated_data(
+    subjects = 1,
+    n.time = 200,
+    margin_sizes = c(50, 50),
+    CNR = 1,
+    k = 0.3,
+    num_active_regions = 2,
+    obs.var = 1
+  )
+```
+
+The goal here is to estimate the **areas of activation** of the tensor coefficient, which are the parts of the tensor coefficient that are not equal to zero. We can see the two slightly-overlapping regions below:
+
+```{r True Tensor Coefficient}
+par(mar=c(0,0,0,0))
+image(simulated_data$true_betas, xaxt="n", yaxt="n")
+```
+
+
+## Running the Model
+
+Next, the model is run for three different decomposition ranks using the `BTRR_single_subject` function. In this case, each model is run over 1,000 iterations, which takes a decently long time, especially if the log-likelihood is calculated and saved at each iteration, which can be useful for diagnostics after the analysis has been run. The analysis is not done here, in the interest of ease of compatibility with package repositories.
+
+```{r, eval=F}
+results <- sapply(seq(3), function(rank) {
+  rank_results <- BTRR_single_subject(
+    input = simulated_data,
+    n.iter = 1000,
+    n.burn = 0,
+    ranks = rank,
+    hyperparameters = NULL,
+    save_llik = T
+  )
+}, simplify = F)
+  
+```
+
