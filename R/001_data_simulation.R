@@ -1,4 +1,4 @@
-#' Simulated tensor response regression data for a single subject
+#' Simulated tensor response regression data
 #'
 #' @param subjects The number of subjects in the data (a scalar)
 #' @param n.time The length of the tensor time series (a scalar)
@@ -9,7 +9,6 @@
 #' @param obs.var The observation variance (a scalar)
 #'
 #' @importFrom neuRosim specifyregion specifydesign
-#' @import stats
 #'
 #' @return A list with objects \code{Y} (the tensor-valued response), \code{x} (the matrix-valued covariate), \code{true_betas} (the array of true tensor coefficient values), and \code{true_k} the true value for the autocorrelation coefficient.
 #' @export
@@ -89,4 +88,61 @@ TRR_simulated_data <-
     class(simulated_data) <- "TRR_data"
 
     return(simulated_data)
+  }
+
+
+#' Simulated tensor regression data
+#'
+#' @param subjects A positive integer indicating the number of subjects for
+#'   which to generate data
+#' @param tensor_dims A vector that indicates the dimensions of the tensor
+#'   covariate for each subject
+#' @param CNR The contrast-to-noise ratio, defined by Welvaert and Rosseel
+#'   (2013) as the size of the (largest) true coefficient value divided by
+#'   the observational noise.
+#' @param num_active The number of contiguous nonzero activation regions
+#' @param other_covar A vector of true values for other (nuisance) coefficients
+#'   that will be used to generate non-tensor-valued covariates
+#'
+#' @return An object of class \code{TR_data} that contains the
+#'   elements \code{y} (a vector of response values), \code{X} (an array of
+#'   covariate values), \code{eta} (a matrix of nuisance covariates),
+#'   \code{true_B} (an array with the true tensor coefficient values), and
+#'   \code{gam} (a vector with the true nuisance coefficient values)
+#' @export
+#' @importFrom neuRosim specifyregion
+#'
+#' @examples
+#' input <- TR_simulated_data()
+TR_simulated_data <-
+  function(subjects = 400,
+           tensor_dims = c(50, 50),
+           CNR = 1,
+           num_active = 3,
+           other_covar = c(1, 1)) {
+    B <- Reduce(`+`, sapply(seq(num_active), function(zz) {
+      neuRosim::specifyregion(
+        dim = tensor_dims,
+        coord = sapply(tensor_dims, function(z)
+          sample(seq(z), size = 1)),
+        radius = ceiling(min(tensor_dims) * runif(1, 0.02, 0.1)),
+        form = "sphere",
+        fading = runif(1, 0.5, 1)
+      )
+    }, simplify = FALSE))
+    eta <-
+      matrix(rnorm(subjects * length(other_covar)), subjects, length(other_covar))
+    gam <- other_covar
+    X <-
+      array(rnorm(prod(tensor_dims) * subjects), dim = c(tensor_dims, subjects))
+    y <-
+      apply(X, length(dim(X)), function(xx)
+        sum(xx * B * CNR)) + c(eta %*% gam) + rnorm(subjects)
+    return(list(
+      y = y,
+      X = X,
+      true_B = B,
+      eta = eta,
+      gam = gam
+    ))
   }

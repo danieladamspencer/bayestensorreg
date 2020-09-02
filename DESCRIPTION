@@ -4,16 +4,16 @@ Title: Bayesian Tensor Regression
 Version: 0.1.0
 Author: Dan Spencer
 Maintainer: Dan Spencer <danieladamspencer@gmail.com>
-Description: This is a package with functions to perform Bayesian tensor regression using tensor decomposition, as covered in my dissertation.
+Description: This is a package with functions to perform Bayesian tensor 
+  regression using tensor decomposition, as covered in my dissertation.
 License: LGPL-3
 Depends:
-    R (>= 3.6.0)
+    R (>= 3.6.0), stats
 Encoding: UTF-8
 LazyData: true
 Imports:
     neuRosim,
     GIGrvg,
     mvtnorm,
-    truncnorm,
-    stats
+    truncnorm
 RoxygenNote: 7.1.1
