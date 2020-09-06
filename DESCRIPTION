@@ -17,3 +17,7 @@ Imports:
     mvtnorm,
     truncnorm
 RoxygenNote: 7.1.1
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
