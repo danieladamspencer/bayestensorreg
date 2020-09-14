@@ -1,5 +1,10 @@
-# This is a script that is meant to run the BTRR single subject model on
-# simulated data.
+## ----setup, include = FALSE---------------------------------------------------
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+
+## ----Data Generation----------------------------------------------------------
 library(bayestensorreg)
 set.seed(95064)
 simulated_data <-
@@ -13,15 +18,20 @@ simulated_data <-
     obs.var = 1
   )
 
-results <- sapply(seq(3), function(rank) {
-  rank_results <- BTRR_single_subject(
-    input = simulated_data,
-    n.iter = 1000,
-    n.burn = 0,
-    ranks = rank,
-    hyperparameters = NULL,
-    save_llik = T
-  )
-}, simplify = F)
+## ----True Tensor Coefficient--------------------------------------------------
+par(mar=c(0,0,0,0))
+image(simulated_data$true_betas, xaxt="n", yaxt="n")
 
-saveRDS(results, "BTRR_vignette_results.rds")
+## ---- eval=F------------------------------------------------------------------
+#  results <- sapply(seq(3), function(rank) {
+#    rank_results <- BTRR_single_subject(
+#      input = simulated_data,
+#      n.iter = 1000,
+#      n.burn = 0,
+#      ranks = rank,
+#      hyperparameters = NULL,
+#      save_llik = T
+#    )
+#  }, simplify = F)
+#  
+

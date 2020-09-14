@@ -7,8 +7,8 @@
 #'   \code{Y} (an array with dimensions
 #'   \eqn{p_1\times \cdots \times p_D \times T \times 1}) and
 #'   \code{x} (a \eqn{T \times 1} matrix).
-#' @param n.iter (a scalar) the number of posterior samples desired
-#' @param n.burn (a scalar) the number of posterior samples to discard as a
+#' @param n_iter (a scalar) the number of posterior samples desired
+#' @param n_burn (a scalar) the number of posterior samples to discard as a
 #'   burn-in
 #' @param ranks (a positive integer) the number of ranks in the PARAFAC/CP
 #'   tensor decomposition
@@ -38,8 +38,8 @@
 #' }
 BTRR_single_subject <-
   function(input,
-           n.iter = 100,
-           n.burn = 0,
+           n_iter = 100,
+           n_burn = 0,
            ranks = 1,
            hyperparameters = NULL,
            save_after = NULL,
@@ -71,15 +71,15 @@ BTRR_single_subject <-
   # > Set Storage ----
   results <-
     list(
-      B = list(),
+      betas = list(),
       W = list(),
       lambda = list(),
       Phi = list(),
-      tau = vector(mode = "numeric",length = n.iter),
-      llik = vector(mode = "numeric",length = n.iter),
-      k = vector(mode = "numeric",length = n.iter),
-      sigma_epsilon_sq = vector(mode = "numeric",length = n.iter),
-      alpha = vector(mode = "numeric",length = n.iter)
+      tau = vector(mode = "numeric",length = n_iter),
+      llik = vector(mode = "numeric",length = n_iter),
+      k = vector(mode = "numeric",length = n_iter),
+      sigma_epsilon_sq = vector(mode = "numeric",length = n_iter),
+      alpha = vector(mode = "numeric",length = n_iter)
     )
 
   # > Set Initials ----
@@ -112,7 +112,7 @@ BTRR_single_subject <-
 
   # > Run MCMC ----
   beginning_of_sampler <- proc.time()[3]
-  for (s in 1:n.iter) {
+  for (s in 1:n_iter) {
     Cr <- mapply(function(b_j,W_j){
       mapply(function(b_jr,W_jr){
         crossprod(b_jr,diag(1/W_jr)) %*% b_jr
@@ -211,7 +211,7 @@ BTRR_single_subject <-
     }
 
     # >> Store the results ----
-    results$B[[s]] <- betas
+    results$betas[[s]] <- betas
     results$W[[s]] <- W
     results$lambda[[s]] <- lambda
     results$Phi[[s]] <- Phi
@@ -227,28 +227,28 @@ BTRR_single_subject <-
       }
     }
 
-    if(s %% ceiling(n.iter/10) == 0){
+    if(s %% ceiling(n_iter/10) == 0){
       cat(
         paste0(
           "##### ",
           Sys.time()," - Rank = ", ranks,
-          " Iteration # ",s," of ",n.iter,
+          " Iteration # ",s," of ",n_iter,
           " #####\n",
           "##### Time elapsed: ",proc.time()[3] - beginning_of_sampler, "  seconds #####\n",
-          "##### Estimated time remaining: ", ((proc.time()[3] - beginning_of_sampler)/s)*(n.iter - s)," seconds #####\n"
+          "##### Estimated time remaining: ", ((proc.time()[3] - beginning_of_sampler)/s)*(n_iter - s)," seconds #####\n"
         )
       )
     }
   } # End sampler
 
-  if(n.burn > 0){
-    results$B <- results$B[-(1:n.burn)]
-    results$W <- results$W[-(1:n.burn)]
-    results$lambda <- results$lambda[-(1:n.burn)]
-    results$Phi <- results$Phi[-(1:n.burn)]
-    results$tau <- results$tau[-(1:n.burn)]
+  if(n_burn > 0){
+    results$betas <- results$betas[-(1:n_burn)]
+    results$W <- results$W[-(1:n_burn)]
+    results$lambda <- results$lambda[-(1:n_burn)]
+    results$Phi <- results$Phi[-(1:n_burn)]
+    results$tau <- results$tau[-(1:n_burn)]
   }
-  results$accept <- results$accept / n.iter
+  results$accept <- results$accept / n_iter
   class(results) <- "BTRR_result"
   return(results)
 }

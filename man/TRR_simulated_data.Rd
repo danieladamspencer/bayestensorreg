@@ -2,7 +2,7 @@
 % Please edit documentation in R/001_data_simulation.R
 \name{TRR_simulated_data}
 \alias{TRR_simulated_data}
-\title{Simulated tensor response regression data for a single subject}
+\title{Simulated tensor response regression data}
 \usage{
 TRR_simulated_data(
   subjects = 1,
@@ -33,7 +33,7 @@ TRR_simulated_data(
 A list with objects \code{Y} (the tensor-valued response), \code{x} (the matrix-valued covariate), \code{true_betas} (the array of true tensor coefficient values), and \code{true_k} the true value for the autocorrelation coefficient.
 }
 \description{
-Simulated tensor response regression data for a single subject
+Simulated tensor response regression data
 }
 \examples{
 input <- TRR_simulated_data()

@@ -1,3 +1,48 @@
+#' Construct tensor coefficient from results
+#'
+#' As the \code{BTRR_single_subject} function saves posterior samples of the
+#'   tensor decomposition components, the tensor coefficient is composed from
+#'   results of class \code{BTRR_result}.
+#'
+#' @param btrr_result A list object with class \code{BTRR_result}
+#'
+#' @return An array in which the last index corresponds to the \eqn{i}th draw
+#'   from the posterior distribution.
+#' @export
+BTRR_extract_B <- function(btrr_result) {
+  out <- sapply(btrr_result$betas, composeParafac, simplify = "array")
+  return(out)
+}
+
+#' Calculate the log-likelihood
+#'
+#' Calculate the log-likelihood for the Bayesian tensor response regression
+#'   model. This can be useful when performing diagnostics. This is excluded
+#'   from the Markov Chain function for performance gains.
+#'
+#' @param input_data A list of class \code{TRR_data} containing (at least) a
+#'   response array \code{Y} and a design matrix \code{x}.
+#' @param results_obj A list of class \code{BTRR_result} containing the draws
+#'   from the posterior distribution from \code{\link{BTRR_single_subject}}.
+#'
+#' @return A vector with length equal to the number of samples from the
+#'   posterior distribution containing the log-likelihood values for each sample.
+#' @export
+BTRR_post_hoc_AR1_llik <- function(input_data,results_obj) {
+  if(!requireNamespace("mvtnorm")) stop("You will need the mvtnorm package.")
+  S <- length(results_obj$B)
+  each_llik <- sapply(seq(S), function(s) {
+    XB <- composeParafac(results_obj$B[[s]]) %o% input_data$x
+    Sigma_AR <- toeplitz(results_obj$k[s]^seq(0,dim(input_data$Y)[length(dim(input_data$Y)) - 1] - 1)) * (results_obj$sigma_epsilon_sq[s] / (1 - results_obj$k[s]^2))
+    Y_til <- input_data$Y - XB
+    out <- sum(apply(Y_til,seq(length(dim(input_data$Y)) - 2), function(y_til) {
+      dmvnorm(c(y_til),sigma = Sigma_AR, log = TRUE)
+    }))
+  })
+  return(each_llik)
+}
+
+
 #' Compose all tensors with Tucker decomposition
 #'
 #' Uses the tensor decomposition from Tucker (1927) to compose a tensor
