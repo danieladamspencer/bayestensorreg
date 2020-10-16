@@ -45,11 +45,6 @@ BTRTucker <-
     n <- length(input$y)
     p <- head(dim(input$X), -1)
 
-    # Source files and load packages
-    require(GIGrvg)
-    require(RcppArmadillo)
-    require(reshape2)
-
     # Set hyperparameters
     a.lam <- 3 # From Guhaniyogi et al. [2017]
     b.lam <- a.lam ^ (1 / (2 * D)) # From Guhaniyogi et al. [2017]

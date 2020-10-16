@@ -7,11 +7,11 @@
 BTRT_draw_Bj(y_til, X, betas, tau, W, sig_y2, G, j)
 }
 \arguments{
-\item{y_til}{response minus eta%*%gam}
+\item{y_til}{response minus etagam}
 
 \item{X}{covariate tensor}
 
-\item{betas}{all betas (for betas from other dimensions)}
+\item{betas}{all betas, for betas from other dimensions}
 
 \item{tau}{global variance}
 

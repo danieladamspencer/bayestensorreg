@@ -6,9 +6,9 @@
 \usage{
 BTRR_single_subject(
   input,
-  n.iter = 100,
-  n.burn = 0,
-  ranks = 1,
+  n_iter = 100,
+  n_burn = 0,
+  rank = 1,
   hyperparameters = NULL,
   save_after = NULL,
   save_llik = TRUE,
@@ -21,12 +21,12 @@ BTRR_single_subject(
 \eqn{p_1\times \cdots \times p_D \times T \times 1}) and
 \code{x} (a \eqn{T \times 1} matrix).}
 
-\item{n.iter}{(a scalar) the number of posterior samples desired}
+\item{n_iter}{(a scalar) the number of posterior samples desired}
 
-\item{n.burn}{(a scalar) the number of posterior samples to discard as a
+\item{n_burn}{(a scalar) the number of posterior samples to discard as a
 burn-in}
 
-\item{ranks}{(a positive integer) the number of ranks in the PARAFAC/CP
+\item{rank}{(a positive integer) the rank for the PARAFAC/CP
 tensor decomposition}
 
 \item{hyperparameters}{a list with named numbers containing at least one of

@@ -1,8 +1,8 @@
 #' Draw from PFC for betas
 #'
-#' @param y_til response minus eta%*%gam
+#' @param y_til response minus etagam
 #' @param X covariate tensor
-#' @param betas all betas (for betas from other dimensions)
+#' @param betas all betas, for betas from other dimensions
 #' @param tau global variance
 #' @param W local variance
 #' @param sig_y2 observational variance
@@ -28,7 +28,7 @@ BTRT_draw_Bj <- function(y_til,X,betas,tau,W,sig_y2,G,j) {
 #' @param eta nuisance input
 #' @param Sig_0 prior covariance
 #' @param mu_gam prior mean
-#' @param y_til response minus c(B)%*%c(X)
+#' @param y_til response minus BX
 #' @param sig_y2 observational variance
 #'
 #' @return gamma update
@@ -42,7 +42,7 @@ BTRT_draw_gam <- function(eta,Sig_0,mu_gam,y_til,sig_y2) {
 
 #' Draw core tensor from PFC
 #'
-#' @param y_til response minus gam%*%eta
+#' @param y_til response minus gam_eta
 #' @param betas tensor decomposition matrices
 #' @param X tensor covariate
 #' @param z global variance
@@ -84,6 +84,8 @@ BTRT_draw_lam <- function(a_lam,b_lam,betas,tau) {
 #' @param lam local shrinkage parameter
 #' @param betas tensor decomposition matrices
 #' @param tau global variance
+#'
+#' @importFrom GIGrvg rgig
 #'
 #' @return update to local variance
 #' @keywords internal
@@ -150,6 +152,8 @@ BTRT_draw_U <- function(a.u,b.u,G,z) {
 #' @param z global shrinkage parameters
 #' @param G core tensor
 #'
+#' @importFrom GIGrvg rgig
+#'
 #' @return update to core tensor local variance
 #' @keywords internal
 BTRT_draw_V <- function(U,z,G) {
@@ -165,10 +169,11 @@ BTRT_draw_V <- function(U,z,G) {
 #' @param G core tensor
 #' @param V core tensor local variance
 #'
+#' @importFrom GIGrvg rgig
+#'
 #' @return update to core tensor global variance
 #' @keywords internal
 BTRT_draw_z <- function(a.z,b.z,G,V) {
-  require(GIGrvg)
   out <- GIGrvg::rgig(1,a.z - length(G)/2,sum(G^2 / V), 2*b.z)
   return(out)
 }

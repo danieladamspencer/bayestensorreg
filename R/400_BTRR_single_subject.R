@@ -10,7 +10,7 @@
 #' @param n_iter (a scalar) the number of posterior samples desired
 #' @param n_burn (a scalar) the number of posterior samples to discard as a
 #'   burn-in
-#' @param ranks (a positive integer) the number of ranks in the PARAFAC/CP
+#' @param rank (a positive integer) the rank for the PARAFAC/CP
 #'   tensor decomposition
 #' @param hyperparameters a list with named numbers containing at least one of
 #'   the following: \code{a.tau}, \code{b.tau}, \code{a.lambda},
@@ -26,7 +26,9 @@
 #' @param save_dir (a character) A path to a directory in which the temporary
 #'   results will be saved. Defaults to the current working directory.
 #'
-#' @import stats GIGrvg mvtnorm utils
+#' @import stats mvtnorm utils
+#' @importFrom GIGrvg rgig
+#' @importFrom statmod rinvgauss
 #'
 #' @return A list with the posterior samples
 #' @export
@@ -40,7 +42,7 @@ BTRR_single_subject <-
   function(input,
            n_iter = 100,
            n_burn = 0,
-           ranks = 1,
+           rank = 1,
            hyperparameters = NULL,
            save_after = NULL,
            save_llik = TRUE,
@@ -51,15 +53,14 @@ BTRR_single_subject <-
     p <- head(dim(input$Y), -2)
     D <- length(dim(input$Y)) - 2
 
-  if(lowest_dim_margin < ranks) stop("The rank of your model cannot be larger than your smallest tensor dimension. Try a lower model rank.")
+  if(lowest_dim_margin < rank) stop("The rank of your model cannot be larger than your smallest tensor dimension. Try a lower model rank.")
   if(is.vector(input$x)) input$x <- tcrossprod(input$x,rep(1,n))
   TT <- dim(input$x)[1] # Number of time steps
 
   # > Load necessary packages ----
-  requireNamespace("GIGrvg", quietly = T) # Needed to draw lambda
   # > Hyperparameters ----
   a.tau = D - 1
-  b.tau = ranks^((1 / D) - 1) # These values are from Guhaniyogi et al [2017]
+  b.tau = rank^((1 / D) - 1) # These values are from Guhaniyogi et al [2017]
   a.lambda = 3
   b.lambda = 3^(1/(2*D)) # These values are from Guhaniyogi et al [2017]
   a.epsilon = 1
@@ -85,25 +86,25 @@ BTRR_single_subject <-
   # > Set Initials ----
   betas <-
     sapply(seq(D),function(each_dim){
-      out <- matrix(rnorm(p[each_dim]*ranks),p[each_dim],ranks)
+      out <- matrix(rnorm(p[each_dim]*rank),p[each_dim],rank)
       return(out)
     },simplify = FALSE)
   tau <- 1
   # This is the grid of alpha values suggested by Guhaniyogi et al. [2017]
   alpha.g <-
-    seq(ranks ^ (-2), ranks ^ (-.1), length.out = 10)
-  lambda <- matrix(1, ranks, 2)
+    seq(rank ^ (-2), rank ^ (-.1), length.out = 10)
+  lambda <- matrix(1, rank, 2)
   W <-
     sapply(betas, function(each_dim) {
       array(1, dim = dim(each_dim))
     }, simplify = FALSE)
-  Phi <- rep(1 / ranks, ranks)
+  Phi <- rep(1 / rank, rank)
   k <- 0
   sigma_epsilon_sq <- 1
   Sigma_AR <- toeplitz(k^seq(0,TT-1)) * sigma_epsilon_sq / (1 - k^2)
-  if(ranks > 1){
-    Xi <- rep(.6,ranks - 1)
-    cov_Metro <- 0.001 * diag(ranks - 1)
+  if(rank > 1){
+    Xi <- rep(.6,rank - 1)
+    cov_Metro <- 0.001 * diag(rank - 1)
     M <- 9
   }else{
     Xi <- 1
@@ -119,11 +120,11 @@ BTRR_single_subject <-
       },b_jr = split(b_j,col(b_j)), W_jr = split(W_j,col(W_j)))
     },b_j = betas, W_j = W) # R x D
     # >> Griddy-Gibbs ----
-    if(ranks > 1){
+    if(rank > 1){
       weights <- sapply(alpha.g,function(a){
         Xi_l <- sapply(seq(M),function(m){
           BTRR_draw_Xi(Xi,cov_Metro,betas,W,tau,a)}) # R - 1 x M
-        if(ranks == 2) {
+        if(rank == 2) {
           Phi_l <- sapply(Xi_l,stick_values)
         }else{
           Phi_l <- apply(Xi_l,2,stick_values)
@@ -131,12 +132,12 @@ BTRR_single_subject <-
         tau_l <- sapply(seq(M),function(m) {
           BTRR_draw_tau(a.tau = a.tau,b.tau = b.tau,betas = betas,W = W,Phi = Phi_l)
         })
-        if(ranks == 2) {
+        if(rank == 2) {
           ldXi <- sapply(Xi_l,function(xi) sum(dbeta(xi,1,a,log = TRUE)))
         }else{
           ldXi <- apply(Xi_l,2,function(xi) sum(dbeta(xi,1,a,log = TRUE)))
         }
-        ldtau <- dgamma(tau_l,a*ranks,b.tau,log = T)
+        ldtau <- dgamma(tau_l,a*rank,b.tau,log = T)
         tau_r <- apply(Phi_l,1,`*`,tau_l)
         ldbetas <- apply(tau_r,1,function(tr){sum(-(sum(p)/2)*log(tr) -
                                                     rowSums(Cr)/tr)})
@@ -160,9 +161,9 @@ BTRR_single_subject <-
         sum(abs(beta_jr))
       })
     })
-    if(ranks == 1){
+    if(rank == 1){
       lambda <- sapply(sumabsb,function(each_dim){
-        rgamma(ranks,
+        rgamma(rank,
                a.lambda + p,
                b.lambda + (Phi * tau) ^ (-.5) * each_dim)
       })
@@ -170,14 +171,14 @@ BTRR_single_subject <-
     }else{
       lambda <-
         apply(sumabsb, 2, function(each_dim) {
-          rgamma(ranks,
+          rgamma(rank,
                  a.lambda + p,
                  b.lambda + (Phi * tau) ^ (-.5) * each_dim)
         })
     }
     # >> Draw W ----
     W <- sapply(seq(D), function(each_dim) {
-      sapply(seq(ranks), function(each_rank) {
+      sapply(seq(rank), function(each_rank) {
         ch <-
           sapply(betas[[each_dim]][, each_rank], function(each_value) {
             each_value ^ 2 / (tau * Phi[each_rank])
@@ -187,7 +188,7 @@ BTRR_single_subject <-
     }, simplify = F)
 
     # >> Draw betas ----
-    for(r in seq(ranks)) {
+    for(r in seq(rank)) {
       for(j in seq(D)) {
         betas[[j]][,r] <- BTRR_draw_beta(Y = input$Y,x = input$x,betas,
                                     Sigma_AR = Sigma_AR,tau = tau,
@@ -223,7 +224,7 @@ BTRR_single_subject <-
 
     if(!is.null(save_after)){
       if(s %% save_after == 0){
-        saveRDS(results, file = file.path(save_dir,paste0("400_",D,"D_rank_",ranks,"_first_",s,"_samples.rds")))
+        saveRDS(results, file = file.path(save_dir,paste0("400_",D,"D_rank_",rank,"_first_",s,"_samples.rds")))
       }
     }
 
@@ -231,7 +232,7 @@ BTRR_single_subject <-
       cat(
         paste0(
           "##### ",
-          Sys.time()," - Rank = ", ranks,
+          Sys.time()," - Rank = ", rank,
           " Iteration # ",s," of ",n_iter,
           " #####\n",
           "##### Time elapsed: ",proc.time()[3] - beginning_of_sampler, "  seconds #####\n",

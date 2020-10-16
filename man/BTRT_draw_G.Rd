@@ -7,7 +7,7 @@
 BTRT_draw_G(y_til, betas, X, z, V, sig_y2)
 }
 \arguments{
-\item{y_til}{response minus gam%*%eta}
+\item{y_til}{response minus gam_eta}
 
 \item{betas}{tensor decomposition matrices}
 

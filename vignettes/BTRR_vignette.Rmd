@@ -41,7 +41,7 @@ set.seed(95064)
 simulated_data <-
   TRR_simulated_data(
     subjects = 1,
-    n.time = 200,
+    max_time = 200,
     margin_sizes = c(50, 50),
     CNR = 1,
     k = 0.3,

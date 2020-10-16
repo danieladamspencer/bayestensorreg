@@ -111,7 +111,7 @@ BTRT_estimate_B <- function(all_B) {
 #' final_B <- BTRT_final_B(result)
 #' }
 BTRT_final_B <- function(btrt_object) {
-  all_B <- btr_all_B(btrt_object)
+  all_B <- BTRT_all_B(btrt_object)
   out <- s2m_B(all_B)
   return(out)
 }

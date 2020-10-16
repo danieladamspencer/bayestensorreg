@@ -3,12 +3,12 @@
 #' @param x A numeric vector
 #' @param title A character string of the plot title
 #'
+#' @import ggplot2
+#'
 #' @return A ggplot grob
 #' @export
-#'
-#' @examples
 ggplot_ts <- function(x, title = NULL) {
-  requireNamespace("ggplot2", quietly = T)
+  Time <- NULL
   ts_df <- as.data.frame(cbind(Time = seq(length(x)), x))
   out <- ggplot(ts_df) +
     geom_line(aes(x = Time, y = x)) +
@@ -25,9 +25,14 @@ ggplot_ts <- function(x, title = NULL) {
 #'   which will be used to separate the density plots for voxels with true zero
 #'   values and true nonzero plots.
 #'
+#' @importFrom reshape2 melt
+#' @importFrom tidyr unite
+#' @import ggplot2
+#'
 #' @return A ggplot grob
 #' @export
 B_densities <- function(B, truth = NULL) {
+  voxel <- value <- NULL
   D <- length(dim(B)) - 1
   if (is.null(truth)) {
     coef_df <-
@@ -60,16 +65,26 @@ B_densities <- function(B, truth = NULL) {
   return(out)
 }
 
-# Plot 2D ----
+#' Make a tile plot using ggplot2
+#'
+#' @param x a matrix
+#' @param title the plot title
+#'
+#' @importFrom reshape2 melt
+#' @import ggplot2
+#'
+#' @return a ggplot grob
+#' @export
 gg_tile_plot <- function(x,title = NULL) {
   if(!is.matrix(x)) stop("The input to this function should be a matrix.")
-  out <- reshape2::melt(x) %>%
-    ggplot() +
+  Var1 <- Var2 <- value <- NULL
+  x_df <- reshape2::melt(x)
+  out <- ggplot(x_df) +
     geom_raster(aes(x = Var1, y = Var2, fill = value)) +
     scale_color_gradient2("") +
     scale_fill_gradient2("") +
     ggtitle(ifelse(is.null(title),"",title)) +
     labs(x="",y="") +
     theme_bw()
-  print(out)
+  return(out)
 }

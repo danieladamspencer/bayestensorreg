@@ -6,7 +6,7 @@
 \usage{
 TRR_simulated_data(
   subjects = 1,
-  n.time = 200,
+  max_time = 200,
   margin_sizes = c(20, 20),
   CNR = 1,
   k = 0.3,
@@ -17,11 +17,13 @@ TRR_simulated_data(
 \arguments{
 \item{subjects}{The number of subjects in the data (a scalar)}
 
-\item{n.time}{The length of the tensor time series (a scalar)}
+\item{max_time}{The length of the tensor time series (a scalar)}
 
 \item{margin_sizes}{The sizes of the tensor coefficient (a vector)}
 
-\item{CNR}{The contrast-to-noise ratio (a scalar), as defined in Welvaert, M., & Rosseel, Y. (2013). On the definition of signal-to-noise ratio and contrast-to-noise ratio for fMRI data. PloS one, 8(11), e77089.}
+\item{CNR}{The contrast-to-noise ratio (a scalar), as defined in
+Welvaert, M., & Rosseel, Y. (2013). On the definition of signal-to-noise
+ratio and contrast-to-noise ratio for fMRI data. PloS one, 8(11), e77089.}
 
 \item{k}{The AR(1) autoregression coefficient (a scalar)}
 

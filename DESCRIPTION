@@ -12,17 +12,18 @@ Depends:
 Encoding: UTF-8
 LazyData: true
 Imports:
-    neuRosim,
+    abind,
+    doParallel,
+    foreach,
+    ggplot2,
     GIGrvg,
     mvtnorm,
-    truncnorm,
+    neuRosim,
     reshape2,
-    ggplot2,
-    tidyr
-ImportsFrom: 
-    abind abind
+    statmod,
+    tidyr,
+    truncnorm
 RoxygenNote: 7.1.1
 Suggests: 
-    knitr,
-    foreach
+    knitr
 VignetteBuilder: knitr

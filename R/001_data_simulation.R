@@ -54,6 +54,118 @@ TR_simulated_data <-
     ))
   }
 
+#' Simulated data for tensor response regression with Gaussian graphical model
+#'
+#' @param subjects The number of subjects in the data (a scalar)
+#' @param regions The number of response tensors per subject in the simulated
+#'   data
+#' @param max_time The length of the tensor time series (a scalar)
+#' @param margin_sizes The sizes of the tensor coefficients (a vector)
+#' @param SNR The signal-to-noise ratio (a scalar), as defined in
+#'   Welvaert, M., & Rosseel, Y. (2013). On the definition of signal-to-noise
+#'   ratio and contrast-to-noise ratio for fMRI data. PloS one, 8(11), e77089.
+#' @param CNR The contrast-to-noise ratio (a scalar), as defined in
+#'   Welvaert, M., & Rosseel, Y. (2013). On the definition of signal-to-noise
+#'   ratio and contrast-to-noise ratio for fMRI data. PloS one, 8(11), e77089.
+#' @param conn_regions The number of response tensors that should have nonzero
+#'   partial correlations
+#' @param conn_level The partial correlation for the connected regions
+#'
+#' @return A list with class \code{TRR_GGM_data} with elements \code{Y},
+#'   \code{x}, \code{true_d}, \code{true_B}, and \code{true_d_covar}
+#' @export
+#'
+#' @importFrom neuRosim specifyregion specifydesign
+#'
+#' @examples
+#' \dontrun{
+#' input <- TRR_GGM_simulated_data()
+#' }
+TRR_GGM_simulated_data <-
+  function(subjects = 20,
+           regions = 10,
+           max_time = 200,
+           margin_sizes = c(10, 10, 10),
+           SNR = 1,
+           CNR = 0.05,
+           conn_regions = 2,
+           conn_level = 0.9) {
+    # Construct covariance based on connectivity
+    d_covar <- diag(regions)
+    conns <- matrix(NA, conn_regions, 2)
+    for (g in seq(conn_regions)) {
+      conns[g, ] <- sample(seq(regions), size = 2, replace = FALSE)
+      if (g >= 2) {
+        for (gg in seq(g - 1)) {
+          while (identical(conns[g, ], conns[gg, ]) |
+                 identical(conns[g, ], rev(conns[gg, ]))) {
+            conns[g, ] <- sample(seq(regions), size = 2, replace = FALSE)
+          }
+        }
+      }
+      d_covar[conns[g, 1], conns[g, 2]] <-
+        d_covar[conns[g, 2], conns[g, 1]] <- conn_level
+    }
+    # Create the subject-ROI effects
+    d <-
+      matrix(rnorm(subjects * regions), subjects, regions) %*% d_covar * SNR
+    # Make the coefficient tensors
+    p <- sapply(seq(regions), function(g)
+      margin_sizes, simplify = F)
+    B <- sapply(p, function(region_idx) {
+      neuRosim::specifyregion(
+        dim = region_idx,
+        coord = runif(length(region_idx)) * region_idx,
+        radius = min(round(min(region_idx * 0.1)),
+                     sample(3:5, 1)),
+        form = "sphere"
+      ) * CNR
+    }, simplify = FALSE)
+
+    # Create a task covariate
+    x <-
+      neuRosim::specifydesign(
+        onsets = seq(0.1 * max_time, 0.9 * max_time, length.out = 5),
+        durations = 1,
+        totaltime = max_time,
+        TR = 1,
+        effectsize = 1,
+        conv = "double-gamma",
+        param = list(list(
+          a1 = 6,# Delay of response relative to onset
+          a2 = 12,# Delay of undershoot relative to onset
+          b1 = 0.9,# Dispersion of response
+          b2 = 0.9,# Dispersion of undershoot
+          c = 0.35 # Scale of undershoot
+        ))
+      )
+    X <- matrix(x, nrow = max_time, ncol = subjects)
+    # Make the response data
+    Y <- mapply(function(b, dd) {
+      b %o% X +
+        sapply(dd,
+               array,
+               dim = c(dim(b), max_time),
+               simplify = "array") +
+        array(rnorm(prod(dim(b)) * max_time * subjects),
+              dim = c(dim(b), max_time, subjects))
+    },
+    b = B,
+    dd = split(d, col(d)),
+    SIMPLIFY = FALSE)
+
+    output <-
+      list(
+        Y = Y,
+        x = X,
+        true_d = d,
+        true_B = B,
+        true_d_covar = d_covar
+      )
+
+    class(output) <- "TRR_GGM_data"
+    return(output)
+  }
 
 #' Simulated tensor response regression data
 #'
@@ -147,116 +259,5 @@ TRR_simulated_data <-
     class(simulated_data) <- "TRR_data"
 
     return(simulated_data)
-  }
-
-#' Simulated data for tensor response regression with Gaussian graphical model
-#'
-#' @param subjects The number of subjects in the data (a scalar)
-#' @param regions The number of response tensors per subject in the simulated
-#'   data
-#' @param max_time The length of the tensor time series (a scalar)
-#' @param margin_sizes The sizes of the tensor coefficients (a vector)
-#' @param SNR The signal-to-noise ratio (a scalar), as defined in
-#'   Welvaert, M., & Rosseel, Y. (2013). On the definition of signal-to-noise
-#'   ratio and contrast-to-noise ratio for fMRI data. PloS one, 8(11), e77089.
-#' @param CNR The contrast-to-noise ratio (a scalar), as defined in
-#'   Welvaert, M., & Rosseel, Y. (2013). On the definition of signal-to-noise
-#'   ratio and contrast-to-noise ratio for fMRI data. PloS one, 8(11), e77089.
-#' @param conn_regions The number of response tensors that should have nonzero
-#'   partial correlations
-#' @param conn_level The partial correlation for the connected regions
-#'
-#' @return A list with class \code{TRR_GGM_data} with elements \code{Y},
-#'   \code{x}, \code{true_d}, \code{true_B}, and \code{true_d_covar}
-#' @export
-#'
-#' @examples
-#' \dontrun{
-#' input <- TRR_GGM_simulated_data()
-#' }
-TRR_GGM_simulated_data <-
-  function(subjects = 20,
-           regions = 10,
-           max_time = 200,
-           margin_sizes = c(10, 10, 10),
-           SNR = 1,
-           CNR = 0.05,
-           conn_regions = 2,
-           conn_level = 0.9) {
-    # Construct covariance based on connectivity
-    d_covar <- diag(regions)
-    conns <- matrix(NA, conn_regions, 2)
-    for (g in seq(conn_regions)) {
-      conns[g, ] <- sample(seq(regions), size = 2, replace = FALSE)
-      if (g >= 2) {
-        for (gg in seq(g - 1)) {
-          while (identical(conns[g, ], conns[gg, ]) |
-                 identical(conns[g, ], rev(conns[gg, ]))) {
-            conns[g, ] <- sample(seq(regions), size = 2, replace = FALSE)
-          }
-        }
-      }
-      d_covar[conns[g, 1], conns[g, 2]] <-
-        d_covar[conns[g, 2], conns[g, 1]] <- conn_level
-    }
-    # Create the subject-ROI effects
-    d <-
-      matrix(rnorm(subjects * regions), subjects, regions) %*% d_covar * SNR
-    # Make the coefficient tensors
-    p <- sapply(seq(regions), function(g)
-      margin_sizes, simplify = F)
-    B <- sapply(p, function(region_idx) {
-      neuRosim::specifyregion(
-        dim = region_idx,
-        coord = runif(length(region_idx)) * region_idx,
-        radius = min(round(min(region_idx * 0.1)),
-                     sample(3:5, 1)),
-        form = "sphere"
-      ) * CNR
-    }, simplify = FALSE)
-
-    # Create a task covariate
-    x <-
-      neuRosim::specifydesign(
-        onsets = seq(0.1 * max_time, 0.9 * max_time, length.out = 5),
-        durations = 1,
-        totaltime = max_time,
-        TR = 1,
-        effectsize = 1,
-        conv = "double-gamma",
-        param = list(list(
-          a1 = 6,# Delay of response relative to onset
-          a2 = 12,# Delay of undershoot relative to onset
-          b1 = 0.9,# Dispersion of response
-          b2 = 0.9,# Dispersion of undershoot
-          c = 0.35 # Scale of undershoot
-        ))
-      )
-    X <- matrix(x, nrow = max_time, ncol = subjects)
-    # Make the response data
-    Y <- mapply(function(b, dd) {
-      b %o% X +
-        sapply(dd,
-               array,
-               dim = c(dim(b), max_time),
-               simplify = "array") +
-        array(rnorm(prod(dim(b)) * max_time * subjects),
-              dim = c(dim(b), max_time, subjects))
-    },
-    b = B,
-    dd = split(d, col(d)),
-    SIMPLIFY = FALSE)
-
-    output <-
-      list(
-        Y = Y,
-        x = X,
-        true_d = d,
-        true_B = B,
-        true_d_covar = d_covar
-      )
-
-    class(output) <- "TRR_GGM_data"
-    return(output)
   }
 

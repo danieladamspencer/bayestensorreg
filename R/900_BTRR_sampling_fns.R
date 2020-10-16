@@ -60,10 +60,11 @@ BTRR_draw_tau <- function(a.tau,b.tau,betas,W,Phi) {
 #'   matrices
 #' @param sigma_epsilon_sq Scalar observational variance
 #'
+#' @importFrom truncnorm rtruncnorm
+#'
 #' @return A scalar
 #' @keywords internal
 BTRR_draw_k <- function(Y,x,betas,sigma_epsilon_sq) {
-  requireNamespace("truncnorm")
   D <- length(betas)
   time_T <- dim(Y)[D + 1]
   B <- composeParafac(betas)

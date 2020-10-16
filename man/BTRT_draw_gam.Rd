@@ -13,7 +13,7 @@ BTRT_draw_gam(eta, Sig_0, mu_gam, y_til, sig_y2)
 
 \item{mu_gam}{prior mean}
 
-\item{y_til}{response minus c(B)%*%c(X)}
+\item{y_til}{response minus BX}
 
 \item{sig_y2}{observational variance}
 }
