@@ -170,132 +170,131 @@ BTRR_GGM <- function(input,
     params <- foreach(g = seq(G), .packages = c("GIGrvg","abind"),
                       .export = ls()) %dopar% {
       # Set up to sample alpha IF RANK > 1
-      # if(rank > 1 & s <= 100){
-      #   M = 4 # Number of reference sets per grid value of alpha
-      #   l.weights <- sapply(alpha.g, function(proposed) {
-      #     bw <- mapply(function(b, w) {
-      #       abind::abind(b, w, along = 3)
-      #     },
-      #     b = betas[[g]],
-      #     w = W[[g]],
-      #     SIMPLIFY = F)
-      #     chi <- sapply(bw, function(each_dim) {
-      #       apply(each_dim, 2, function(each_position) {
-      #         t(each_position[, 1]) %*%
-      #           diag(1 / each_position[, 2]) %*%
-      #           each_position[, 1]
-      #       })
-      #     })
-      #     ### INCLUDE RANK 1 change:
-      #     if(rank == 1){
-      #       chi <- sum(chi)
-      #     }else{
-      #       chi <- apply(chi, 1, sum)
-      #     }
-      #     # This helps to debug when values go to infinity. Eventually, a workaround
-      #     # should make this obsolete
-      #     for (abc in 1:length(chi)) {
-      #       if (is.infinite(chi[abc]))
-      #         browser()
-      #       if (is.nan(chi[abc]))
-      #         browser()
-      #     }
-      #     ## Draw Phi proposals
-      #
-      #     ##### Phi under a stick-breaking prior
-      #     old_Xi_g <- Xi[,g]
-      #     phi.l <- sapply(seq(M),function(m){
-      #       new_Xi_g <- c(old_Xi_g + cov_Metro[[g]] %*%
-      #                       rnorm(rank - 1))
-      #       while(length(new_Xi_g[new_Xi_g <= 0]) > 0){
-      #         new_Xi_g <- c(old_Xi_g + cov_Metro[[g]] %*%
-      #                         rnorm(rank - 1))
-      #       }
-      #       new_post_dens <- sum(sapply(seq(rank - 1),function(cr){
-      #         stick_break_log_posterior(new_Xi_g,cr, betas[[g]],W[[g]],tau[g],proposed)
-      #       }))
-      #       old_post_dens <- sum(sapply(seq(rank - 1),function(cr){
-      #         stick_break_log_posterior(old_Xi_g,cr, betas[[g]],W[[g]],tau[g],proposed)
-      #       }))
-      #       if(exp(new_post_dens - old_post_dens) > runif(1)) old_Xi_g <- new_Xi_g
-      #       stick_values(old_Xi_g)
-      #     })
-      #     ## Draw tau proposals
-      #     ### ANOTHER RANK 1 CHANGE
-      #     if(rank == 1){
-      #       chi2 <- chi / phi.l
-      #     }else{
-      #       chi2 <- apply(phi.l, 2, function(each_proposal) {
-      #         chi / each_proposal
-      #       })
-      #       chi2 <- colSums(chi2)
-      #     }
-      #     tau.l <- rgig(M, a.tau - rank * sum(p[[g]])/2, chi2, 2 * b.tau)
-      #     refs <- list(phi = phi.l, tau = tau.l)
-      #     ## Evaluate the densities
-      #     lik.mean.tensor <-
-      #       composeParafac(betas[[g]]) %o% input$x + array(1, dim = p[[g]]) %o% rep(1,TT) %o% d[g,]
-      #     l.lik <-
-      #       sum(dnorm(c(input$Y[[g]]), c(lik.mean.tensor), sqrt(sig2y), log = T)) # Log-likelihood
-      #     if(rank == 1){
-      #       l.bdens <- apply(rbind(refs$tau, refs$phi), 2, function(each_proposal) {
-      #         # Log prior density for all betas
-      #         sapply(each_proposal[-1], function(each_rank_phi) {
-      #           sum(unlist(sapply(bw, function(each_dim) {
-      #             apply(each_dim, 2, function(each_rank_bw) {
-      #               dnorm(
-      #                 each_rank_bw[, 1],
-      #                 0,
-      #                 each_proposal[1] * each_rank_phi * each_rank_bw[, 2],
-      #                 log = T
-      #               )
-      #             })
-      #           })))
-      #         })
-      #       })
-      #     }else{
-      #       l.bdens <-
-      #         colSums(apply(rbind(refs$tau, refs$phi), 2, function(each_proposal) {
-      #           # Log prior density for all betas
-      #           sapply(each_proposal[-1], function(each_rank_phi) {
-      #             sum(unlist(sapply(bw, function(each_dim) {
-      #               apply(each_dim, 2, function(each_rank_bw) {
-      #                 dnorm(
-      #                   each_rank_bw[, 1],
-      #                   0,
-      #                   each_proposal[1] * each_rank_phi * each_rank_bw[, 2],
-      #                   log = T
-      #                 )
-      #               })
-      #             })))
-      #           })
-      #         }))
-      #     }
-      #
-      #     l.tau <-
-      #       dgamma(refs$tau, a.tau, b.tau, log = T) # Log prior density for tau
-      #
-      #     ### RANK 1 CHANGE:
-      #     if(rank == 1){
-      #       l.phi <- sapply(refs$phi,function(each_proposal){
-      #         lgamma(rank * proposed) - rank * lgamma(proposed) + sum((rep(proposed, rank) - 1) * log(each_proposal))
-      #       })
-      #     }else{
-      #       l.phi <-
-      #         apply(refs$phi, 2, function(each_proposal) {
-      #           lgamma(rank * proposed) - rank * lgamma(proposed) + sum((rep(proposed, rank) - 1) * log(each_proposal))
-      #         })
-      #     }
-      #     # Log prior density for phi
-      #     apply(cbind(l.phi, l.tau, l.bdens), 1, sum) + l.lik
-      #   })
-      #   mean.lweights <- apply(l.weights, 2, mean)
-      #   weights <- exp(mean.lweights - max(mean.lweights))
-      #   alpha <- sample(alpha.g, 1, prob = weights)
-      # }else{
-      #   alpha <- 0
-      # }
-      alpha <- 0
+      if(rank > 1 & s <= 100){
+        M = 4 # Number of reference sets per grid value of alpha
+        l.weights <- sapply(alpha.g, function(proposed) {
+          bw <- mapply(function(b, w) {
+            abind::abind(b, w, along = 3)
+          },
+          b = betas[[g]],
+          w = W[[g]],
+          SIMPLIFY = F)
+          chi <- sapply(bw, function(each_dim) {
+            apply(each_dim, 2, function(each_position) {
+              t(each_position[, 1]) %*%
+                diag(1 / each_position[, 2]) %*%
+                each_position[, 1]
+            })
+          })
+          ### INCLUDE RANK 1 change:
+          if(rank == 1){
+            chi <- sum(chi)
+          }else{
+            chi <- apply(chi, 1, sum)
+          }
+          # This helps to debug when values go to infinity. Eventually, a workaround
+          # should make this obsolete
+          for (abc in 1:length(chi)) {
+            if (is.infinite(chi[abc]))
+              browser()
+            if (is.nan(chi[abc]))
+              browser()
+          }
+          ## Draw Phi proposals
+
+          ##### Phi under a stick-breaking prior
+          old_Xi_g <- Xi[,g]
+          phi.l <- sapply(seq(M),function(m){
+            new_Xi_g <- c(old_Xi_g + cov_Metro[[g]] %*%
+                            rnorm(rank - 1))
+            while(length(new_Xi_g[new_Xi_g <= 0]) > 0){
+              new_Xi_g <- c(old_Xi_g + cov_Metro[[g]] %*%
+                              rnorm(rank - 1))
+            }
+            new_post_dens <- sum(sapply(seq(rank - 1),function(cr){
+              stick_break_log_posterior(new_Xi_g,cr, betas[[g]],W[[g]],tau[g],proposed)
+            }))
+            old_post_dens <- sum(sapply(seq(rank - 1),function(cr){
+              stick_break_log_posterior(old_Xi_g,cr, betas[[g]],W[[g]],tau[g],proposed)
+            }))
+            if(exp(new_post_dens - old_post_dens) > runif(1)) old_Xi_g <- new_Xi_g
+            stick_values(old_Xi_g)
+          })
+          ## Draw tau proposals
+          ### ANOTHER RANK 1 CHANGE
+          if(rank == 1){
+            chi2 <- chi / phi.l
+          }else{
+            chi2 <- apply(phi.l, 2, function(each_proposal) {
+              chi / each_proposal
+            })
+            chi2 <- colSums(chi2)
+          }
+          tau.l <- rgig(M, a.tau - rank * sum(p[[g]])/2, chi2, 2 * b.tau)
+          refs <- list(phi = phi.l, tau = tau.l)
+          ## Evaluate the densities
+          lik.mean.tensor <-
+            composeParafac(betas[[g]]) %o% input$x + array(1, dim = p[[g]]) %o% rep(1,TT) %o% d[g,]
+          l.lik <-
+            sum(dnorm(c(input$Y[[g]]), c(lik.mean.tensor), sqrt(sig2y), log = T)) # Log-likelihood
+          if(rank == 1){
+            l.bdens <- apply(rbind(refs$tau, refs$phi), 2, function(each_proposal) {
+              # Log prior density for all betas
+              sapply(each_proposal[-1], function(each_rank_phi) {
+                sum(unlist(sapply(bw, function(each_dim) {
+                  apply(each_dim, 2, function(each_rank_bw) {
+                    dnorm(
+                      each_rank_bw[, 1],
+                      0,
+                      each_proposal[1] * each_rank_phi * each_rank_bw[, 2],
+                      log = T
+                    )
+                  })
+                })))
+              })
+            })
+          }else{
+            l.bdens <-
+              colSums(apply(rbind(refs$tau, refs$phi), 2, function(each_proposal) {
+                # Log prior density for all betas
+                sapply(each_proposal[-1], function(each_rank_phi) {
+                  sum(unlist(sapply(bw, function(each_dim) {
+                    apply(each_dim, 2, function(each_rank_bw) {
+                      dnorm(
+                        each_rank_bw[, 1],
+                        0,
+                        each_proposal[1] * each_rank_phi * each_rank_bw[, 2],
+                        log = T
+                      )
+                    })
+                  })))
+                })
+              }))
+          }
+
+          l.tau <-
+            dgamma(refs$tau, a.tau, b.tau, log = T) # Log prior density for tau
+
+          ### RANK 1 CHANGE:
+          if(rank == 1){
+            l.phi <- sapply(refs$phi,function(each_proposal){
+              lgamma(rank * proposed) - rank * lgamma(proposed) + sum((rep(proposed, rank) - 1) * log(each_proposal))
+            })
+          }else{
+            l.phi <-
+              apply(refs$phi, 2, function(each_proposal) {
+                lgamma(rank * proposed) - rank * lgamma(proposed) + sum((rep(proposed, rank) - 1) * log(each_proposal))
+              })
+          }
+          # Log prior density for phi
+          apply(cbind(l.phi, l.tau, l.bdens), 1, sum) + l.lik
+        })
+        mean.lweights <- apply(l.weights, 2, mean)
+        weights <- exp(mean.lweights - max(mean.lweights))
+        alpha <- sample(alpha.g, 1, prob = weights)
+      }else{
+        alpha <- 0
+      }
       BtWB_g <- BTRR_GGM_BtWB(betas[[g]], W[[g]])
       # >> Draw phi ----
       phi_draw <- BTRR_GGM_draw_Phi(BtWB_g = BtWB_g,
