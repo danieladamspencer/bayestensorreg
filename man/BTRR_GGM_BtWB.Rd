@@ -12,7 +12,7 @@ BTRR_GGM_BtWB(beta_g, W_g)
 \item{W_g}{region omega}
 }
 \value{
-The results of the quadratic (D x rank)
+The results of the quadratic (D x Rank)
 }
 \description{
 Quadratic calculation

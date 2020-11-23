@@ -160,7 +160,7 @@ BTRR_draw_beta <- function(Y,x,betas,Sigma_AR,tau,Phi,W,j,r) {
 #'   as a matrix.
 #' @export
 #'
-composeParafac <- function(bb){
+composeParafac2 <- function(bb){
   DD <- length(bb)
   pp <- lapply(bb,nrow)
   RR <- lapply(bb,ncol)
@@ -171,6 +171,25 @@ composeParafac <- function(bb){
     Reduce("%o%",rank_betas)
   },simplify = "array")
   apply(cp_summands,1:DD,sum)
+}
+
+#' Compose a tensor from its CANDECOMP/PARAFAC (CP) decomposition
+#'
+#' This function takes a list of length D containing all of
+#' the components of the CP decomposition and returning a D-dimensional
+#' tensor.
+#'
+#' @param bb A list of length D in which each element is a p_d by R matrix
+#'
+#' @return A single array-class tensor. In two-dimensions, this will be returned
+#'   as a matrix.
+#' @export
+#'
+composeParafac <- function(bb) {
+  Rank <- ncol(bb[[1]])
+  core_tensor <- diag(1,Rank)
+  out <- Reduce(`%x%`, rev(bb)) %*% c(core_tensor)
+  return(array(out, dim = sapply(bb,nrow)))
 }
 
 #' Matricization of a tensor

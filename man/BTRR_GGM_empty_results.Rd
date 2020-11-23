@@ -4,13 +4,13 @@
 \alias{BTRR_GGM_empty_results}
 \title{Create a preallocated result list object}
 \usage{
-BTRR_GGM_empty_results(p, n, rank, n_iter)
+BTRR_GGM_empty_results(p, n, Rank, n_iter)
 }
 \arguments{
 \item{p}{a list of length equal to the number of regions giving the response
 tensor dimensions for that region}
 
-\item{rank}{number of ranks in the model}
+\item{Rank}{number of ranks in the model}
 
 \item{n_iter}{number of iterations for the MCMC}
 }

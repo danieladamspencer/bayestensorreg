@@ -10,7 +10,7 @@
 #' @param n_iter (a scalar) the number of posterior samples desired
 #' @param n_burn (a scalar) the number of posterior samples to discard as a
 #'   burn-in
-#' @param rank (a positive integer) the rank for the PARAFAC/CP
+#' @param Rank (a positive integer) the rank for the PARAFAC/CP
 #'   tensor decomposition
 #' @param hyperparameters a list with named numbers containing at least one of
 #'   the following: \code{a.tau}, \code{b.tau}, \code{a.lambda},
@@ -45,7 +45,7 @@
 BTRR_GGM <- function(input,
                      n_iter = 100,
                      n_burn = 0,
-                     rank = 1,
+                     Rank = 1,
                      hyperparameters = NULL,
                      save_after = NULL,
                      save_llik = TRUE,
@@ -56,9 +56,9 @@ BTRR_GGM <- function(input,
     stop("The input should be a list with class TRR_GGM_data")
   lowest_dim_margin <- min(sapply(input$Y, function(g)
     head(dim(g), -2)))
-  if (rank > lowest_dim_margin)
+  if (Rank > lowest_dim_margin)
     stop(
-      "The rank should be less than or equal to the length\n
+      "The Rank should be less than or equal to the length\n
       of the smallest response tensor dimensiton."
     )
   if (length(input$Y) < 2)
@@ -95,7 +95,7 @@ BTRR_GGM <- function(input,
 
   # Hyperparameters
   a.tau = D - 1
-  b.tau = rank^((1 / D) - 1) # These values are from Guhaniyogi et al [2017]
+  b.tau = Rank^((1 / D) - 1) # These values are from Guhaniyogi et al [2017]
   a.lambda = 3
   b.lambda = 3^(1/(2*D)) # These values are from Guhaniyogi et al [2017]
   a.zeta = 1
@@ -107,7 +107,7 @@ BTRR_GGM <- function(input,
     list2env(hyperparameters, envir = environment())
 
   # Set Storage
-  results <- BTRR_GGM_empty_results(p, n, rank, n_iter)
+  results <- BTRR_GGM_empty_results(p, n, Rank, n_iter)
 
   # > Set Initials ----
   # >> Continuing from other result files ----
@@ -118,7 +118,7 @@ BTRR_GGM <- function(input,
     d <- matrix(0,G,n)
     betas <- sapply(p, function(p_g) {
       sapply(p_g, function(p_gj) {
-        matrix(rnorm(p_gj * rank, sd = sd(unlist(input$Y))/100), p_gj, rank)
+        matrix(rnorm(p_gj * Rank, sd = sd(unlist(input$Y))/100), p_gj, Rank)
       }, simplify = F)
     }, simplify = F)
     y_prime <- sapply(input$Y, function(Y_g) {
@@ -136,26 +136,26 @@ BTRR_GGM <- function(input,
     tau <- rep(1, G) # Assuming unit value
     # This is the grid of alpha values suggested by Guhaniyogi et al. [2015]
     alpha.g <-
-      seq(rank ^ (-D), rank ^ (-.1), length.out = 10)
+      seq(Rank ^ (-D), Rank ^ (-.1), length.out = 10)
     lambda <-
       sapply(1:G, function(g) {
-        matrix(1, rank, 2)
+        matrix(1, Rank, D)
       }, simplify = F)
     W <-
       lapply(betas, function(beta_g) {
         sapply(beta_g, function(each_dim) {
           array(1, dim = dim(each_dim))
         }, simplify = FALSE)
-      }) # List of length 5, each element a list of length 2, each element a matrix dim p_j, rank
+      }) # List of length 5, each element a list of length 2, each element a matrix dim p_j, Rank
     phi <-
       sapply(1:G, function(g) {
-        rep(1 / rank, rank)
-      }, simplify = F) # List of length G, each element a matrix of rank rows by 2 columns
+        rep(1 / Rank, Rank)
+      }, simplify = F) # List of length G, each element a matrix of Rank rows by 2 columns
     sig2y <- 1 # Observational variance estimate
-    if(rank > 1){
-      Xi <- sapply(seq(G),function(x) rep(.6,rank - 1))
+    if(Rank > 1){
+      Xi <- sapply(seq(G),function(x) rep(.6,Rank - 1))
       if(!is.matrix(Xi)) Xi <- matrix(Xi,nrow = 1)
-      cov_Metro <- sapply(seq(G),function(x) 0.01 * diag(rank - 1),simplify = FALSE)
+      cov_Metro <- sapply(seq(G),function(x) 0.01 * diag(Rank - 1),simplify = FALSE)
     }else{
       Xi <- matrix(1,1,G)
     }
@@ -167,131 +167,17 @@ BTRR_GGM <- function(input,
   for (s in 1:n_iter) {
     # >> Griddy-Gibbs ----
     ## Almost everything is done separately based on the region of interest
-    params <- foreach(g = seq(G), .packages = c("GIGrvg","abind"),
-                      .export = ls()) %dopar% {
+    params <- foreach(g = seq(G),
+                      .packages = c("GIGrvg","abind","bayestensorreg"),
+                      .verbose = T, .errorhandling = "stop") %dopar% {
       # Set up to sample alpha IF RANK > 1
-      if(rank > 1 & s <= 100){
-        M = 4 # Number of reference sets per grid value of alpha
-        l.weights <- sapply(alpha.g, function(proposed) {
-          bw <- mapply(function(b, w) {
-            abind::abind(b, w, along = 3)
-          },
-          b = betas[[g]],
-          w = W[[g]],
-          SIMPLIFY = F)
-          chi <- sapply(bw, function(each_dim) {
-            apply(each_dim, 2, function(each_position) {
-              t(each_position[, 1]) %*%
-                diag(1 / each_position[, 2]) %*%
-                each_position[, 1]
-            })
-          })
-          ### INCLUDE RANK 1 change:
-          if(rank == 1){
-            chi <- sum(chi)
-          }else{
-            chi <- apply(chi, 1, sum)
-          }
-          # This helps to debug when values go to infinity. Eventually, a workaround
-          # should make this obsolete
-          for (abc in 1:length(chi)) {
-            if (is.infinite(chi[abc]))
-              browser()
-            if (is.nan(chi[abc]))
-              browser()
-          }
-          ## Draw Phi proposals
-
-          ##### Phi under a stick-breaking prior
-          old_Xi_g <- Xi[,g]
-          phi.l <- sapply(seq(M),function(m){
-            new_Xi_g <- c(old_Xi_g + cov_Metro[[g]] %*%
-                            rnorm(rank - 1))
-            while(length(new_Xi_g[new_Xi_g <= 0]) > 0){
-              new_Xi_g <- c(old_Xi_g + cov_Metro[[g]] %*%
-                              rnorm(rank - 1))
-            }
-            new_post_dens <- sum(sapply(seq(rank - 1),function(cr){
-              stick_break_log_posterior(new_Xi_g,cr, betas[[g]],W[[g]],tau[g],proposed)
-            }))
-            old_post_dens <- sum(sapply(seq(rank - 1),function(cr){
-              stick_break_log_posterior(old_Xi_g,cr, betas[[g]],W[[g]],tau[g],proposed)
-            }))
-            if(exp(new_post_dens - old_post_dens) > runif(1)) old_Xi_g <- new_Xi_g
-            stick_values(old_Xi_g)
-          })
-          ## Draw tau proposals
-          ### ANOTHER RANK 1 CHANGE
-          if(rank == 1){
-            chi2 <- chi / phi.l
-          }else{
-            chi2 <- apply(phi.l, 2, function(each_proposal) {
-              chi / each_proposal
-            })
-            chi2 <- colSums(chi2)
-          }
-          tau.l <- rgig(M, a.tau - rank * sum(p[[g]])/2, chi2, 2 * b.tau)
-          refs <- list(phi = phi.l, tau = tau.l)
-          ## Evaluate the densities
-          lik.mean.tensor <-
-            composeParafac(betas[[g]]) %o% input$x + array(1, dim = p[[g]]) %o% rep(1,TT) %o% d[g,]
-          l.lik <-
-            sum(dnorm(c(input$Y[[g]]), c(lik.mean.tensor), sqrt(sig2y), log = T)) # Log-likelihood
-          if(rank == 1){
-            l.bdens <- apply(rbind(refs$tau, refs$phi), 2, function(each_proposal) {
-              # Log prior density for all betas
-              sapply(each_proposal[-1], function(each_rank_phi) {
-                sum(unlist(sapply(bw, function(each_dim) {
-                  apply(each_dim, 2, function(each_rank_bw) {
-                    dnorm(
-                      each_rank_bw[, 1],
-                      0,
-                      each_proposal[1] * each_rank_phi * each_rank_bw[, 2],
-                      log = T
-                    )
-                  })
-                })))
-              })
-            })
-          }else{
-            l.bdens <-
-              colSums(apply(rbind(refs$tau, refs$phi), 2, function(each_proposal) {
-                # Log prior density for all betas
-                sapply(each_proposal[-1], function(each_rank_phi) {
-                  sum(unlist(sapply(bw, function(each_dim) {
-                    apply(each_dim, 2, function(each_rank_bw) {
-                      dnorm(
-                        each_rank_bw[, 1],
-                        0,
-                        each_proposal[1] * each_rank_phi * each_rank_bw[, 2],
-                        log = T
-                      )
-                    })
-                  })))
-                })
-              }))
-          }
-
-          l.tau <-
-            dgamma(refs$tau, a.tau, b.tau, log = T) # Log prior density for tau
-
-          ### RANK 1 CHANGE:
-          if(rank == 1){
-            l.phi <- sapply(refs$phi,function(each_proposal){
-              lgamma(rank * proposed) - rank * lgamma(proposed) + sum((rep(proposed, rank) - 1) * log(each_proposal))
-            })
-          }else{
-            l.phi <-
-              apply(refs$phi, 2, function(each_proposal) {
-                lgamma(rank * proposed) - rank * lgamma(proposed) + sum((rep(proposed, rank) - 1) * log(each_proposal))
-              })
-          }
-          # Log prior density for phi
-          apply(cbind(l.phi, l.tau, l.bdens), 1, sum) + l.lik
-        })
-        mean.lweights <- apply(l.weights, 2, mean)
-        weights <- exp(mean.lweights - max(mean.lweights))
-        alpha <- sample(alpha.g, 1, prob = weights)
+      if(Rank > 1 & s <= 100){
+        alpha <- BTRR_GGM_griddy_Gibbs_alpha(g = g, M = 4, p = p, TT = TT,
+                                             Rank = Rank, cov_Metro = cov_Metro,
+                                             alpha.g = alpha.g, betas = betas,
+                                             W = W, Xi = Xi, tau = tau,
+                                             a.tau = a.tau, b.tau = b.tau,
+                                             d = d, input = input, sig2y = sig2y)
       }else{
         alpha <- 0
       }
@@ -304,6 +190,7 @@ BTRR_GGM <- function(input,
       phi.g <- phi_draw$phi.g
       accept <- phi_draw$accept.g
       Xi.g <- phi_draw$Xi_g
+
       # >> Draw tau ----
       tau.g <-
         BTRR_GGM_draw_tau(
@@ -334,7 +221,7 @@ BTRR_GGM <- function(input,
       betas.g <- betas[[g]]
       # This next part has to be done sequentially, so the for loops are unavoidable
       for (each_dim in seq(D)) {
-        for (each_rank in 1:rank) {
+        for (each_rank in 1:Rank) {
           betas.g[[each_dim]][,each_rank] <- BTRR_GGM_draw_beta(
             Y_g = input$Y[[g]],
             x = input$x,
@@ -404,7 +291,7 @@ BTRR_GGM <- function(input,
       z$tau
     })
 
-    if(rank > 1){
+    if(Rank > 1){
       Xi <- sapply(params, function(z) z$Xi[drop = FALSE])
       if(!is.matrix(Xi)) Xi <- t(as.matrix(Xi))
     }
@@ -431,7 +318,7 @@ BTRR_GGM <- function(input,
 
     if(!is.null(save_after)){
       if(s %% save_after == 0){
-        saveRDS(results,file = file.path(save_dir,paste0(D,"D_rank_",rank,"_first_",s,"_samples_",format(Sys.Date(),"%Y%m%d"),".rds")))
+        saveRDS(results,file = file.path(save_dir,paste0(D,"D_rank_",Rank,"_first_",s,"_samples_",format(Sys.Date(),"%Y%m%d"),".rds")))
       }
     }
 
@@ -439,7 +326,7 @@ BTRR_GGM <- function(input,
       cat(
         paste0(
           "##### ",
-          Sys.time()," - Rank = ", rank,
+          Sys.time()," - Rank = ", Rank,
           " Iteration # ",s," of ",n_iter,
           " #####\n",
           "##### Time elapsed: ",proc.time()[3] - beginning_of_sampler, "  seconds #####\n",

@@ -8,7 +8,7 @@ BTRR_GGM(
   input,
   n_iter = 100,
   n_burn = 0,
-  rank = 1,
+  Rank = 1,
   hyperparameters = NULL,
   save_after = NULL,
   save_llik = TRUE,
@@ -28,7 +28,7 @@ BTRR_GGM(
 \item{n_burn}{(a scalar) the number of posterior samples to discard as a
 burn-in}
 
-\item{rank}{(a positive integer) the rank for the PARAFAC/CP
+\item{Rank}{(a positive integer) the rank for the PARAFAC/CP
 tensor decomposition}
 
 \item{hyperparameters}{a list with named numbers containing at least one of

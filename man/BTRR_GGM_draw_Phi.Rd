@@ -7,6 +7,8 @@
 BTRR_GGM_draw_Phi(BtWB_g, Xi_g, accept_g, cov_Metro_g, p_g, tau_g, alpha_g)
 }
 \arguments{
+\item{BtWB_g}{region normalized beta quadratic}
+
 \item{Xi_g}{last draw region Xi}
 
 \item{accept_g}{acceptance count for region g}
@@ -14,10 +16,6 @@ BTRR_GGM_draw_Phi(BtWB_g, Xi_g, accept_g, cov_Metro_g, p_g, tau_g, alpha_g)
 \item{cov_Metro_g}{metropolis covariance for region g}
 
 \item{tau_g}{region tau}
-
-\item{beta_g}{region beta}
-
-\item{W_g}{region omega}
 
 \item{alpha}{region alpha}
 }
