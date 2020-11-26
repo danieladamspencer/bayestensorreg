@@ -22,8 +22,11 @@ Imports:
     reshape2,
     statmod,
     tidyr,
-    truncnorm
+    truncnorm,
+    grDevices,
+    graphics
 RoxygenNote: 7.1.1
 Suggests: 
-    knitr
+    knitr,
+    DensParcorr
 VignetteBuilder: knitr

@@ -1,0 +1,91 @@
+---
+title: "Bayesian Tensor Response Regression with Gaussian Graphical Model Vignette"
+author: "Dan Spencer"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Bayesian Tensor Response Regression with Gaussian Graphical Model Vignette}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Bayesian Tensor Response Regression with a Gaussian Graphical Model
+
+This is a vignette to cover the basic usage of the model developed by [Spencer et al. (2020)](https://link.springer.com/article/10.1007/s11336-020-09727-0), with the goal of making the implementation of the model accessible to as many people as possible. The basic structure of the input data is a list containing the following :
+
+- `Y` is a list of `G` different tensor responses, each with the same dimensions. The second-to-last index should correspond to time, and the last index should correspond to subject.
+- `x` is a matrix where the first index corresponds to time and the second index corresponds to subject.
+
+Simulated data in this format can be created using the `TRR_GGM_simulated_data` function.
+
+```{r Simulate data}
+library(bayestensorreg)
+set.seed(95064) # This is the zip code for the University of California, Santa Cruz
+input <- TRR_GGM_simulated_data(
+  subjects = 20, 
+  regions = 5, # Corresponds to G
+  max_time = 100,
+  margin_sizes = c(30, 30), # In this example, D = 2
+  SNR = 1,
+  CNR = 1,
+  conn_regions = 2,
+  conn_level = 0.95
+)
+str(input)
+```
+
+Note that the simulated data have the class `TRR_GGM_data` and a few extra elements (`true_d`,`true_B`, and `true_d_covar`) that allow for the verification of the model results. If using your own data, it is not necessary to give the input list the class `TRR_GGM_data`, as the `BTRR_GGM` function will check your data and assign the class if the data are in the correct format. Next, the `BTRR_GGM` function on the input will (by default) run the rank 1 tensor decomposition model for 100 iterations, which should take about 5 minutes.
+
+```{r Perform the MCMC, eval=T}
+results <- BTRR_GGM(input)
+```
+
+Next, extracting the tensor samples from the posterior distribution can be done using the `BTRR_GGM_extract_B` function. The mean and the sequential 2-means estimates for the tensor coefficients are found and plotted below to compare to the true values.
+
+```{r plot coefficient results, fig.height=7, fig.width=5,warning=F,message=F}
+all_B <- BTRR_GGM_extract_B(results)
+mean_B <- sapply(all_B, function(b) apply(b,1:2,mean), simplify = F)
+names(mean_B) <- paste("Region", 1:5)
+mean_df <- reshape2::melt(mean_B)
+mean_df$Quantity <- "Posterior Mean"
+s2m_B <- sapply(all_B, s2m_B, simplify = F)
+names(s2m_B) <- paste("Region",1:5)
+s2m_df <- reshape2::melt(s2m_B)
+s2m_df$Quantity <- "Seq. 2-means"
+names(input$true_B) <- paste("Region", 1:5)
+true_df <- reshape2::melt(input$true_B)
+true_df$Quantity <- "True Value"
+compare_df <- rbind(mean_df,s2m_df,true_df)
+library(ggplot2)
+ggplot(compare_df) +
+  geom_raster(aes(x = Var1, y = Var2, fill = value)) + 
+  facet_grid(L1~Quantity) + 
+  labs(x="",y="", title = "Coefficient Estimates - Rank 1 Model") +
+  scale_fill_gradient("")
+```
+
+The connectivity results, shown through partial correlations can be found using the median posterior precision below. Though the sequential 2-means estimate could also be used to estimate the partial correlations, that is suggested for longer MCMC chains, as 100 samples from the posterior distribution is not enough for robust estimation of the precision.
+
+```{r plot connectivity results}
+Sig_median <- apply(results$Sig,1:2,median)
+median_parcor <- DensParcorr::prec2part(Sig_median)
+median_df <- reshape2::melt(median_parcor)
+median_df <- median_df[median_df$Var1 > median_df$Var2,]
+median_df$Quantity <- "Posterior Median"
+true_parcor <- reshape2::melt(input$true_d_covar)
+true_parcor <- true_parcor[true_parcor$Var1 > true_parcor$Var2,]
+true_parcor$Quantity <- "True Value"
+parcor_df <- rbind(median_df,true_parcor)
+ggplot(parcor_df) +
+  geom_point(aes(x = value, y = paste(Var1, Var2, sep = "&"), color = Quantity)) +
+  labs(x = "Partial Correlation", y = "Region Pair", title = "Connectivity")
+```
+
+These are the basic quantities of interest in the model, but all parameters are saved. Additional functionality is planned for plotting and model comparison metrics.

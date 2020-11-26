@@ -52,6 +52,7 @@ BTRR_GGM <- function(input,
                      results_file = NULL,
                      num_cores = parallel::detectCores() - 2,
                      save_dir = ".") {
+  input <- BTRR_GGM_check_data(input)
   if(class(input) != "TRR_GGM_data")
     stop("The input should be a list with class TRR_GGM_data")
   lowest_dim_margin <- min(sapply(input$Y, function(g)
@@ -64,11 +65,11 @@ BTRR_GGM <- function(input,
   if (length(input$Y) < 2)
     stop("If you only have one region of interest, use the BTRR_single_subject function.")
   dims_Y <- sapply(input$Y, dim)
-  D <- nrow(dims_Y) - 2
-  if (any(c(dims_Y[(D + 1), ], nrow(input$x)) != dims_Y[(D + 1), 1]))
+  DD <- nrow(dims_Y) - 2
+  if (any(c(dims_Y[(DD + 1), ], nrow(input$x)) != dims_Y[(DD + 1), 1]))
     stop("The length of time does not match up between the\n
          regions-of-interest and/or the design matrix.")
-  if (any(dims_Y[(D + 2), ] != dims_Y[(D + 2), 1]))
+  if (any(dims_Y[(DD + 2), ] != dims_Y[(DD + 2), 1]))
     stop("The number of subjects does not match up \n
          between the regions-of-interest.")
   n <- tail(dim(input$Y[[1]]),1) # Number of subjects
@@ -94,10 +95,10 @@ BTRR_GGM <- function(input,
   }
 
   # Hyperparameters
-  a.tau = D - 1
-  b.tau = Rank^((1 / D) - 1) # These values are from Guhaniyogi et al [2017]
+  a.tau = DD - 1
+  b.tau = Rank^((1 / DD) - 1) # These values are from Guhaniyogi et al [2017]
   a.lambda = 3
-  b.lambda = 3^(1/(2*D)) # These values are from Guhaniyogi et al [2017]
+  b.lambda = 3^(1/(2*DD)) # These values are from Guhaniyogi et al [2017]
   a.zeta = 1
   b.zeta = 0.01 # These values are from Wang [2012]
   a.sig = 1
@@ -122,10 +123,10 @@ BTRR_GGM <- function(input,
       }, simplify = F)
     }, simplify = F)
     y_prime <- sapply(input$Y, function(Y_g) {
-      lm_residuals <- apply(Y_g, seq(D), function(y_gv) lm(y_gv ~ input$x)$residuals)
-      lm_residuals <- aperm(lm_residuals, c(seq((D+1))[-1],1))
+      lm_residuals <- apply(Y_g, seq(DD), function(y_gv) lm(y_gv ~ input$x)$residuals)
+      lm_residuals <- aperm(lm_residuals, c(seq((DD+1))[-1],1))
       lm_residuals <- array(lm_residuals, dim = dim(Y_g))
-      subject_sum_residuals <- apply(abs(lm_residuals), (D+2), sum)
+      subject_sum_residuals <- apply(abs(lm_residuals), (DD+2), sum)
       return(subject_sum_residuals)
     }, simplify = T)
     Sig <- solve(crossprod(y_prime)/n)
@@ -136,10 +137,10 @@ BTRR_GGM <- function(input,
     tau <- rep(1, G) # Assuming unit value
     # This is the grid of alpha values suggested by Guhaniyogi et al. [2015]
     alpha.g <-
-      seq(Rank ^ (-D), Rank ^ (-.1), length.out = 10)
+      seq(Rank ^ (-DD), Rank ^ (-.1), length.out = 10)
     lambda <-
       sapply(1:G, function(g) {
-        matrix(1, Rank, D)
+        matrix(1, Rank, DD)
       }, simplify = F)
     W <-
       lapply(betas, function(beta_g) {
@@ -169,7 +170,7 @@ BTRR_GGM <- function(input,
     ## Almost everything is done separately based on the region of interest
     params <- foreach(g = seq(G),
                       .packages = c("GIGrvg","abind","bayestensorreg"),
-                      .verbose = T, .errorhandling = "stop") %dopar% {
+                      .verbose = F, .errorhandling = "stop") %dopar% {
       # Set up to sample alpha IF RANK > 1
       if(Rank > 1 & s <= 100){
         alpha <- BTRR_GGM_griddy_Gibbs_alpha(g = g, M = 4, p = p, TT = TT,
@@ -220,7 +221,7 @@ BTRR_GGM <- function(input,
       # >> Draw beta ----
       betas.g <- betas[[g]]
       # This next part has to be done sequentially, so the for loops are unavoidable
-      for (each_dim in seq(D)) {
+      for (each_dim in seq(DD)) {
         for (each_rank in 1:Rank) {
           betas.g[[each_dim]][,each_rank] <- BTRR_GGM_draw_beta(
             Y_g = input$Y[[g]],
@@ -304,7 +305,7 @@ BTRR_GGM <- function(input,
     }
 
 
-    results$B[[s]] <- betas
+    results$betas[[s]] <- betas
     results$W[[s]] <- W
     results$lambda[[s]] <- lambda
     results$Phi[[s]] <- phi
@@ -318,7 +319,7 @@ BTRR_GGM <- function(input,
 
     if(!is.null(save_after)){
       if(s %% save_after == 0){
-        saveRDS(results,file = file.path(save_dir,paste0(D,"D_rank_",Rank,"_first_",s,"_samples_",format(Sys.Date(),"%Y%m%d"),".rds")))
+        saveRDS(results,file = file.path(save_dir,paste0(DD,"D_rank_",Rank,"_first_",s,"_samples_",format(Sys.Date(),"%Y%m%d"),".rds")))
       }
     }
 
@@ -338,7 +339,7 @@ BTRR_GGM <- function(input,
   } # End sampler
 
   if(n_burn > 0){
-    results$B <- results$B[-(1:n_burn)]
+    results$betas <- results$betas[-(1:n_burn)]
     results$W <- results$W[-(1:n_burn)]
     results$lambda <- results$lambda[-(1:n_burn)]
     results$Phi <- results$Phi[-(1:n_burn)]
@@ -351,5 +352,6 @@ BTRR_GGM <- function(input,
 
   results$accept <- results$accept / n_iter
   results$total_time <- proc.time()[3] - beginning_of_sampler
+  class(results) <- "BTRR_GGM_result"
   return(results)
 } # End MCMC function

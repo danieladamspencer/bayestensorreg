@@ -14,6 +14,26 @@ BTRR_extract_B <- function(btrr_result) {
   return(out)
 }
 
+#' Construct tensor coefficient from results
+#'
+#' As the \code{BTRR_single_subject} function saves posterior samples of the
+#'   tensor decomposition components, the tensor coefficient is composed from
+#'   results of class \code{BTRR_GGM_result}.
+#'
+#' @param btrr_ggm_result A list object with class \code{BTRR_result}
+#'
+#' @return An array in which the last index corresponds to the \eqn{i}th draw
+#'   from the posterior distribution.
+#' @export
+BTRR_GGM_extract_B <- function(btrr_ggm_result) {
+  out <- sapply(seq(length(btrr_ggm_result$betas[[1]])), function(g) {
+    sapply(seq(length(btrr_ggm_result$betas)), function(s) {
+      composeParafac(btrr_ggm_result$betas[[s]][[g]])
+    }, simplify = "array")
+  }, simplify = F)
+  return(out)
+}
+
 #' Calculate the log-likelihood
 #'
 #' Calculate the log-likelihood for the Bayesian tensor response regression

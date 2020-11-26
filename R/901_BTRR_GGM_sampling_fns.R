@@ -18,6 +18,30 @@ BTRR_GGM_BtWB <- function(beta_g, W_g) {
   return(BtWB)
 }
 
+#' Check that the input data are compatible with the \code{BTRR_GGM} model function.
+#'
+#' @param input an input object to be checked
+#'
+#' @return If the input object passes all of the checks, then it is also returned.
+#' @keywords internal
+BTRR_GGM_check_data <- function(input) {
+  is_list <- class(input) %in% c("list","TRR_GGM_data")
+  if(!is_list) stop("The input data should be a list.")
+  has_xY <- all(c("x","Y") %in% names(input))
+  if(!has_xY) stop("The input should be a list with elements `x` and `Y`.")
+  has_multiple_response_tensors <- length(input$Y) > 1
+  if(!has_multiple_response_tensors) stop("There should be multiple response tensors within `input$Y`.")
+  dim_Yg <- dim(input$Y[[1]])
+  has_dim_DD <- length(dim_Yg) > 2
+  if(!has_dim_DD) stop("Each response tensor should be an array of order at least 3 (at least one index for tensor location, an index for time, and an index for subject).")
+  dims_equal <- all(sapply(input$Y,function(Yg) tail(dim(Yg),2) == tail(dim_Yg,2)))
+  if(!dims_equal) stop("The last two dimensions (corresponding to time and subject) in the response tensors do not all match.")
+  x_matches_Y <- all(dim(input$x) == tail(dim_Yg,2))
+  if(!x_matches_Y) stop("The dimensions of the predictor do not match the final two dimensions of the response tensors.")
+  class(input) <- "TRR_GGM_data"
+  return(input)
+}
+
 #' Draw betas
 #'
 #' @param Y_g region response
@@ -35,6 +59,7 @@ BTRR_GGM_BtWB <- function(beta_g, W_g) {
 #' @keywords internal
 BTRR_GGM_draw_beta <- function(Y_g, x, d_g, beta_g, sig2y,
                                tau.g, phi.g, omega.g, j, r) {
+  DD <- length(dim(Y_g)) - 2
   TT <- nrow(x)
   n <- ncol(x)
   if(length(phi.g) == 1){
@@ -45,7 +70,7 @@ BTRR_GGM_draw_beta <- function(Y_g, x, d_g, beta_g, sig2y,
         beta_gj[,-r, drop = FALSE]
       })) %o% x + array(1, dim = head(dim(Y_g), -1)) %o% d_g
   }
-  y.til <- apply((Y_g - expected),c(j, (D+1):(D+2)), identity)
+  y.til <- apply((Y_g - expected),c(j, (DD+1):(DD+2)), identity)
   y.til <- aperm(y.til, perm = c(2,1,3,4))
   B_g_noj <-
     composeParafac(sapply(beta_g[-j], function(beta_g_notj)
@@ -74,6 +99,7 @@ BTRR_GGM_draw_beta <- function(Y_g, x, d_g, beta_g, sig2y,
 #' @return the matrix d
 #' @keywords internal
 BTRR_GGM_draw_d <- function(input, params, Sig, sig2y) {
+  DD <- length(dim(input$Y[[1]])) - 2
   TT <- nrow(input$x)
   p <- sapply(input$Y, function(Y_g) head(dim(Y_g),-2),simplify = F)
   y_hat <- mapply(function(y,parm){
@@ -82,7 +108,7 @@ BTRR_GGM_draw_d <- function(input, params, Sig, sig2y) {
 
   inv_d_covar <- Sig + (TT*diag(sapply(p,prod)))^2 / sig2y
   d_covar <- chol2inv(chol(inv_d_covar))
-  d_mean <- d_covar%*% t(sapply(y_hat, function(yh){apply(yh,D+2,sum)}))
+  d_mean <- d_covar%*% t(sapply(y_hat, function(yh){apply(yh,DD+2,sum)}))
 
   d <- apply(d_mean,2,function(dm){
     dm + rnorm(length(dm)) %*% chol(d_covar)
@@ -282,26 +308,26 @@ BTRR_GGM_empty_results <- function(p, n, Rank, n_iter) {
   check_D <- sapply(p,length)
   if(any(check_D !=  check_D[1]))
     stop("All of the regions should have the same dimension length.")
-  D <- unique(check_D)
+  DD <- unique(check_D)
   out <- list(
     betas = sapply(seq(n_iter), function(s) {
       sapply(seq(G), function(g) {
-        sapply(seq(D), function(j) {
+        sapply(seq(DD), function(j) {
           matrix(NA, p[[g]][j], Rank)
         }, simplify = F)
       }, simplify = F)
     }, simplify = F),
     W = sapply(seq(n_iter), function(s) {
       sapply(seq(G), function(g) {
-        sapply(seq(D), function(j) {
+        sapply(seq(DD), function(j) {
           matrix(NA, p[[g]][j], Rank)
         }, simplify = F)
       }, simplify = F)
     }, simplify = F),
     lambda = sapply(seq(n_iter), function(s) {
       sapply(seq(G), function(g) {
-        sapply(seq(D), function(j) {
-          matrix(NA, D, Rank)
+        sapply(seq(DD), function(j) {
+          matrix(NA, DD, Rank)
         }, simplify = F)
       }, simplify = F)
     }, simplify = F),
@@ -341,6 +367,7 @@ BTRR_GGM_extract_last_iter <- function(result_file) {
   out$d <- results_list$d[,,S]
   out$betas <- results_list$betas[[S]]
   G <- length(out$betas)
+  DD <- length(out$betas[[1]])
   Rank <- ncol(out$betas[[1]])
   if(G > 1){
     out$Sig <- results_list$Sig[,,S]
@@ -358,7 +385,7 @@ BTRR_GGM_extract_last_iter <- function(result_file) {
   out$tau <- results_list$tau[,S]
   # This is the grid of alpha values suggested by Guhaniyogi et al. [2015]
   out$alpha.g <-
-    seq(Rank ^ (-D), Rank ^ (-.1), length.out = 10)
+    seq(Rank ^ (-DD), Rank ^ (-.1), length.out = 10)
   out$lambda <- results_list$lambda[[S]]
   out$W <- results_list$W[[S]]
   out$Phi <- results_list$Phi[[S]]
