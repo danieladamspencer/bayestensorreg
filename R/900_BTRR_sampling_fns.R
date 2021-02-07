@@ -16,8 +16,17 @@ BTRR_draw_Xi <- function(Xi, cov_Metro, betas, W, tau, a) {
   while(any(proposal < 0) | any(proposal > 1)) {
     proposal <- Xi + rnorm(length(Xi))%*%chol(cov_Metro)
   }
-  ld_Xi <- stick_break_log_posterior(Xi,betas,W,tau,a)
-  ld_proposal <- stick_break_log_posterior(proposal,betas,W,tau,a)
+  rank <- ncol(betas[[1]])
+  if(rank == 2) {
+    ld_Xi <- sapply(Xi,function(xi) sum(dbeta(xi,1,a,log = TRUE)))
+  }else{
+    ld_Xi <- apply(Xi,2,function(xi) sum(dbeta(xi,1,a,log = TRUE)))
+  }
+  if(rank == 2) {
+    ld_proposal <- sapply(proposal,function(xi) sum(dbeta(xi,1,a,log = TRUE)))
+  }else{
+    ld_proposal <- apply(proposal,2,function(xi) sum(dbeta(xi,1,a,log = TRUE)))
+  }
   out <- Xi
   if(runif(1) < exp(ld_proposal - ld_Xi)){
     out <- proposal
