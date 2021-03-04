@@ -10,6 +10,9 @@
 #'   from the posterior distribution.
 #' @export
 BTRR_extract_B <- function(btrr_result) {
+  # First, a backwards compatibility fix
+  if("B" %in% names(btrr_result))
+    btrr_result$betas <- btrr_result$B
   out <- sapply(btrr_result$betas, composeParafac, simplify = "array")
   return(out)
 }

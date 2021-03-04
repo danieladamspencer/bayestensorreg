@@ -188,8 +188,11 @@ composeParafac2 <- function(bb){
 #'
 composeParafac <- function(bb) {
   Rank <- ncol(bb[[1]])
-  core_tensor <- diag(1,Rank)
-  out <- Reduce(`%x%`, rev(bb)) %*% c(core_tensor)
+  Dim <- length(bb)
+  core_tensor <- rep(0,Rank^Dim)
+  diag_idx <- seq(1, Rank^Dim, length.out = Rank)
+  core_tensor[diag_idx] <- 1
+  out <- Reduce(`%x%`, rev(bb)) %*% core_tensor
   return(array(out, dim = sapply(bb,nrow)))
 }
 
