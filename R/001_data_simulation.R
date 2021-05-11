@@ -92,20 +92,15 @@ TRR_GGM_simulated_data <-
            conn_level = 0.9) {
     # Construct covariance based on connectivity
     d_covar <- diag(regions)
-    conns <- matrix(NA, conn_regions, 2)
-    for (g in seq(conn_regions)) {
-      conns[g, ] <- sample(seq(regions), size = 2, replace = FALSE)
-      if (g >= 2) {
-        for (gg in seq(g - 1)) {
-          while (identical(conns[g, ], conns[gg, ]) |
-                 identical(conns[g, ], rev(conns[gg, ]))) {
-            conns[g, ] <- sample(seq(regions), size = 2, replace = FALSE)
-          }
-        }
-      }
-      d_covar[conns[g, 1], conns[g, 2]] <-
-        d_covar[conns[g, 2], conns[g, 1]] <- conn_level
-    }
+    off_diags <- numeric(sum(upper.tri(d_covar)))
+    conn_pairs <- sample(
+      1:length(off_diags),
+      size = conn_regions,
+      replace = F)
+    off_diags[conn_pairs] <- conn_level
+    d_covar[upper.tri(d_covar)] <- off_diags
+    d_covar <- d_covar + t(d_covar)
+    diag(d_covar) <- 1
     # Create the subject-ROI effects
     d <-
       matrix(rnorm(subjects * regions), subjects, regions) %*% chol(d_covar) * sqrt(SNR)
