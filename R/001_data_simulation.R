@@ -108,7 +108,7 @@ TRR_GGM_simulated_data <-
     }
     # Create the subject-ROI effects
     d <-
-      matrix(rnorm(subjects * regions), subjects, regions) %*% d_covar * SNR
+      matrix(rnorm(subjects * regions), subjects, regions) %*% chol(d_covar) * SNR
     # Make the coefficient tensors
     p <- sapply(seq(regions), function(g)
       margin_sizes, simplify = F)
