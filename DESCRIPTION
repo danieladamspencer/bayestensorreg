@@ -17,6 +17,7 @@ Imports:
     foreach,
     ggplot2,
     GIGrvg,
+    glmnet,
     mvtnorm,
     neuRosim,
     reshape2,
@@ -28,5 +29,6 @@ Imports:
 RoxygenNote: 7.1.1
 Suggests: 
     knitr,
-    DensParcorr
+    DensParcorr,
+    rmarkdown
 VignetteBuilder: knitr

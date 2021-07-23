@@ -252,7 +252,7 @@ BTRTucker <-
       results$V <- results$V[,-seq(n_burn)]
       results$U <- results$U[,-seq(n_burn)]
     }
-    results$G <- asplit(results$G, length(dim(results$G)))
+    if(!all(ranks == 1)) results$G <- asplit(results$G, length(dim(results$G)))
     class(results) <- "BTRT_result"
     return(results)
   }

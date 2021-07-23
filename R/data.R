@@ -1,8 +1,13 @@
-#' Results from the simulated sample Bayesian Tensor Response Regression
+#' Results from the simulated sample Bayesian Tensor Response Regression with Gaussian Graphical Model
 #'
-#' This object is a list containing the results of the
-#' \code{BTRR_single_subject} function for ranks 1, 2, and 3 based on the
-#' simulated data created in the vignette.
+#' This is a \code{BTRR_GMM_result} object from running the BTRR_GGM function on
+#'   the simulated data created in the vignette.
 #'
-#' @format A list of three \code{BTRR_result} objects.
-"BTRR_results"
+#' @docType data
+#'
+#' @usage data(btrr_ggm_result)
+#'
+#' @format A BTRR_GGM_result object
+#'
+#' @keywords datasets
+"btrr_ggm_result"

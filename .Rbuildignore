@@ -1,5 +1,2 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
-^vignettes/BTRR_vignette\.Rmd$
-^vignettes/BTRR_GGM_vignette\.Rmd$
-^R/data\.R$

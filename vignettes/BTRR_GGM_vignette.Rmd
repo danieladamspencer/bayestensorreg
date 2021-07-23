@@ -4,7 +4,7 @@ author: "Dan Spencer"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Bayesian Tensor Response Regression with Gaussian Graphical Model Vignette}
+  %\VignetteIndexEntry{test}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -43,14 +43,49 @@ str(input)
 
 Note that the simulated data have the class `TRR_GGM_data` and a few extra elements (`true_d`,`true_B`, and `true_d_covar`) that allow for the verification of the model results. If using your own data, it is not necessary to give the input list the class `TRR_GGM_data`, as the `BTRR_GGM` function will check your data and assign the class if the data are in the correct format. Next, the `BTRR_GGM` function on the input will (by default) run the rank 1 tensor decomposition model for 100 iterations, which should take about 5 minutes.
 
-```{r Perform the MCMC, eval=T}
-results <- BTRR_GGM(input)
+```{r Perform the MCMC, eval=F}
+btrr_ggm_result <- BTRR_GGM(input)
+##### 2021-07-22 16:21:01 - Rank = 1 Iteration # 10 of 100 #####
+##### Time elapsed: 38.855  seconds #####
+##### Estimated time remaining: 349.695 seconds #####
+##### 2021-07-22 16:21:31 - Rank = 1 Iteration # 20 of 100 #####
+##### Time elapsed: 68.805  seconds #####
+##### Estimated time remaining: 275.22 seconds #####
+##### 2021-07-22 16:22:01 - Rank = 1 Iteration # 30 of 100 #####
+##### Time elapsed: 98.963  seconds #####
+##### Estimated time remaining: 230.913666666667 seconds #####
+##### 2021-07-22 16:22:31 - Rank = 1 Iteration # 40 of 100 #####
+##### Time elapsed: 128.29  seconds #####
+##### Estimated time remaining: 192.435 seconds #####
+##### 2021-07-22 16:23:01 - Rank = 1 Iteration # 50 of 100 #####
+##### Time elapsed: 158.635  seconds #####
+##### Estimated time remaining: 158.635 seconds #####
+##### 2021-07-22 16:23:30 - Rank = 1 Iteration # 60 of 100 #####
+##### Time elapsed: 187.61  seconds #####
+##### Estimated time remaining: 125.073333333333 seconds #####
+##### 2021-07-22 16:24:01 - Rank = 1 Iteration # 70 of 100 #####
+##### Time elapsed: 218.62  seconds #####
+##### Estimated time remaining: 93.6942857142857 seconds #####
+##### 2021-07-22 16:24:34 - Rank = 1 Iteration # 80 of 100 #####
+##### Time elapsed: 251.87  seconds #####
+##### Estimated time remaining: 62.9675 seconds #####
+##### 2021-07-22 16:25:04 - Rank = 1 Iteration # 90 of 100 #####
+##### Time elapsed: 281.734  seconds #####
+##### Estimated time remaining: 31.3037777777778 seconds #####
+##### 2021-07-22 16:25:37 - Rank = 1 Iteration # 100 of 100 #####
+##### Time elapsed: 314.342  seconds #####
+##### Estimated time remaining: 0 seconds #####
 ```
+
+```{r Load results from file, echo=F, eval=T}
+data(btrr_ggm_result, package = "bayestensorreg")
+```
+
 
 Next, extracting the tensor samples from the posterior distribution can be done using the `BTRR_GGM_extract_B` function. The mean and the sequential 2-means estimates for the tensor coefficients are found and plotted below to compare to the true values.
 
 ```{r plot coefficient results, fig.height=7, fig.width=5,warning=F,message=F}
-all_B <- BTRR_GGM_extract_B(results)
+all_B <- BTRR_GGM_extract_B(btrr_ggm_result)
 mean_B <- sapply(all_B, function(b) apply(b,1:2,mean), simplify = F)
 names(mean_B) <- paste("Region", 1:5)
 mean_df <- reshape2::melt(mean_B)
@@ -73,13 +108,14 @@ ggplot(compare_df) +
 
 The connectivity results, shown through partial correlations can be found using the median posterior precision below. Though the sequential 2-means estimate could also be used to estimate the partial correlations, that is suggested for longer MCMC chains, as 100 samples from the posterior distribution is not enough for robust estimation of the precision.
 
-```{r plot connectivity results}
-Sig_median <- apply(results$Sig,1:2,median)
+```{r plot connectivity results, fig.width=5}
+Sig_median <- apply(btrr_ggm_result$Sig,1:2,median)
 median_parcor <- DensParcorr::prec2part(Sig_median)
 median_df <- reshape2::melt(median_parcor)
 median_df <- median_df[median_df$Var1 > median_df$Var2,]
 median_df$Quantity <- "Posterior Median"
-true_parcor <- reshape2::melt(input$true_d_covar)
+true_parcor <- DensParcorr::prec2part(solve(input$true_d_covar))
+true_parcor <- reshape2::melt(true_parcor)
 true_parcor <- true_parcor[true_parcor$Var1 > true_parcor$Var2,]
 true_parcor$Quantity <- "True Value"
 parcor_df <- rbind(median_df,true_parcor)
