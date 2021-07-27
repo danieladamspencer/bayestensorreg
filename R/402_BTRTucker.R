@@ -10,11 +10,16 @@
 #' @param n_burn (a scalar) the number of posterior samples to discard as a
 #'   burn-in
 #' @param hyperparameters a list with the (scalar) elements \code{a.tau},
-#'   \code{b.tau}, \code{a.lambda}, \code{b.lambda}, \code{a.epsilon}, and
-#'   \code{b.epsilon} defining the values of the hyperparameters within the
-#'   model. If \code{NULL}, then default values will be used.
+#'   \code{b.tau}, \code{a.lam}, \code{b.lam}, \code{nu}, \code{s_02},
+#'   \code{a.sig}, \code{b.sig}, \code{Sig_0}, \code{mu_gam}, \code{alpha.grid},
+#'    \code{a.u}, \code{b.u}, \code{a.z}, and/or \code{b.z},
+#'   defining the values of the hyperparameters within the
+#'   model. If \code{NULL}, then default values will be used. It is also
+#'   possible to specify only a subset of the hyperparameters. The
+#'   remaining hyperparameters are set to their default values.
 #' @param save_dir (a character) A path to a directory in which the temporary
-#'   results will be saved. Defaults to the current working directory.
+#'   results will be saved. Defaults to the current working directory. If
+#'   \code{NULL}, no temporary saves are made.
 #'
 #' @return A list with the posterior samples
 #' @export
