@@ -4,14 +4,13 @@
 \alias{FTRTucker}
 \title{Frequentist tensor regression with the Tucker decomposition}
 \usage{
-FTRTucker(y, X, eta, ranks = NULL, epsilon = 1e-04, betas_LASSO = TRUE)
+FTRTucker(input, ranks = NULL, epsilon = 1e-04, betas_LASSO = TRUE)
 }
 \arguments{
-\item{y}{a vector of response values}
-
-\item{X}{an array of covariate values}
-
-\item{eta}{a matrix of nuisance covariates}
+\item{input}{An object of class \code{TR_data} that contains (at least) the
+elements \code{y} (a vector of response values) and \code{X} (an array of
+covariate values). Optionally, \code{eta} (a matrix of nuisance covariates)
+can also be included. Other list elements will be ignored.}
 
 \item{ranks}{The ranks to be used with the Tucker decomposition. This should
 be a vector with the same length as the tensor covariate for each subject.}
@@ -35,6 +34,6 @@ Frequentist tensor regression with the Tucker decomposition
 \examples{
 \dontrun{
 input <- TR_simulated_data()
-results <- FTRTucker(input$y, input$X, input$eta)
+results <- FTRTucker(input)
 }
 }

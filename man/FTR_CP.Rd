@@ -4,14 +4,13 @@
 \alias{FTR_CP}
 \title{Frequentist Tensor Regression with the CP decomposition}
 \usage{
-FTR_CP(y, X, eta, rank = 1, epsilon = 1e-08)
+FTR_CP(input, rank = 1, epsilon = 1e-08)
 }
 \arguments{
-\item{y}{a vector of response values}
-
-\item{X}{an array of covariate values}
-
-\item{eta}{a matrix of nuisance covariates}
+\item{input}{An object of class \code{TR_data} that contains (at least) the
+elements \code{y} (a vector of response values) and \code{X} (an array of
+covariate values). Optionally, \code{eta} (a matrix of nuisance covariates)
+can also be included. Other list elements will be ignored.}
 
 \item{rank}{The rank of the CP decomposition to be used}
 

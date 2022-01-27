@@ -4,14 +4,13 @@
 \alias{ftr_log_likelihood}
 \title{Obtain the log-likelihood for the tensor regression linear model}
 \usage{
-ftr_log_likelihood(y, X, eta, B, gam)
+ftr_log_likelihood(input, B, gam)
 }
 \arguments{
-\item{y}{vector}
-
-\item{X}{tensor covariate}
-
-\item{eta}{design matrix}
+\item{input}{An object of class \code{TR_data} that contains (at least) the
+elements \code{y} (a vector of response values) and \code{X} (an array of
+covariate values). Optionally, \code{eta} (a matrix of nuisance covariates)
+can also be included. Other list elements will be ignored.}
 
 \item{B}{tensor coefficient}
 

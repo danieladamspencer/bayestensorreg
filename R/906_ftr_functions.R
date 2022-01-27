@@ -1,8 +1,9 @@
 #' Obtain the log-likelihood for the tensor regression linear model
 #'
-#' @param y vector
-#' @param X tensor covariate
-#' @param eta design matrix
+#' @param input An object of class \code{TR_data} that contains (at least) the
+#'   elements \code{y} (a vector of response values) and \code{X} (an array of
+#'   covariate values). Optionally, \code{eta} (a matrix of nuisance covariates)
+#'   can also be included. Other list elements will be ignored.
 #' @param B tensor coefficient
 #' @param gam vector coefficients
 #'
@@ -10,10 +11,10 @@
 #'
 #' @return scalar
 #' @keywords internal
-ftr_log_likelihood <- function(y,X,eta,B,gam) {
-  out <- sum(dnorm(y -
-                     c(tcrossprod(gam,eta)) -
-                     apply(X,length(dim(X)),function(x){
+ftr_log_likelihood <- function(input,B,gam) {
+  out <- sum(dnorm(input$y -
+                     c(tcrossprod(gam,input$eta)) -
+                     apply(input$X,length(dim(input$X)),function(x){
                        crossprod(c(x),c(B))
                      }),log = TRUE))
   return(out)
@@ -21,9 +22,10 @@ ftr_log_likelihood <- function(y,X,eta,B,gam) {
 
 #' Obtain the log-likelihood for the tensor regression probit model
 #'
-#' @param y vector
-#' @param X tensor covariate
-#' @param eta design matrix
+#' @param input An object of class \code{TR_data} that contains (at least) the
+#'   elements \code{y} (a vector of response values) and \code{X} (an array of
+#'   covariate values). Optionally, \code{eta} (a matrix of nuisance covariates)
+#'   can also be included. Other list elements will be ignored.
 #' @param B tensor coefficient
 #' @param gam vector coefficients
 #'
@@ -31,13 +33,13 @@ ftr_log_likelihood <- function(y,X,eta,B,gam) {
 #'
 #' @return scalar
 #' @keywords internal
-ftr_probit_log_likelihood <- function(y,X,eta,B,gam) {
-  Lam <- c(tcrossprod(gam,eta)) -
-    apply(X,length(dim(X)),function(x){
+ftr_probit_log_likelihood <- function(input,B,gam) {
+  Lam <- c(tcrossprod(gam,input$eta)) -
+    apply(input$X,length(dim(input$X)),function(x){
       crossprod(c(x),c(B))
     })
   PI <- exp(Lam)/(1 + exp(Lam))
-  out <- sum(dbinom(y,size = 1,prob = PI, log = TRUE))
+  out <- sum(dbinom(input$y,size = 1,prob = PI, log = TRUE))
   return(out)
 }
 
