@@ -59,7 +59,7 @@ FTR_CP <- function(input,rank = 1,epsilon = 1e-8) {
     B <- compose_parafac(beta_new)
     gam_new <- lm(input$y - apply(input$X,length(dim(input$X)),function(x){
       crossprod(c(x),c(B))
-    }) ~ -1 + eta)$coefficients
+    }) ~ -1 + input$eta)$coefficients
     new_llik <- ftr_log_likelihood(input,B,gam_new)
   }
   return(list(gam = gam_old,betas = beta_old,B = compose_parafac(beta_old),llik = llik, total_time = proc.time()[3] - start_model))
