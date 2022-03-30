@@ -1,3 +1,21 @@
+#' Perform mode-k matricization on an array
+#'
+#' @param x an array
+#' @param k an integer or vector of integers
+#'
+#' @return a matrix with dimensions \code{prod(dim(x)[k]) x prod(dim(X)[-k])}
+#' @export
+#'
+#' @examples
+#' set.seed(47408)
+#' p <- rep(50,3)
+#' N <- 20
+#' A <- array(rnorm(prod(p,N)),dim = c(p,N))
+#' Ak <- kFold(A,2)
+kFold = function(x,k) {
+  return(matrix(c(aperm(x,c(k,seq(length(dim(x)))[-k]))),prod(dim(x)[k]),prod(dim(x)[-k])))
+}
+
 #' Draw from PFC for betas
 #'
 #' @param y_til response minus etagam
@@ -9,17 +27,25 @@
 #' @param G core tensor
 #' @param j dimension index
 #'
+#' @importFrom Matrix chol solve
+#'
 #' @return updates the betas object at index j
 #' @keywords internal
 BTRT_draw_Bj <- function(y_til,X,betas,tau,W,sig_y2,G,j) {
   prior_covar <- tau * c(W[[j]])
-  B_notj <- Reduce(`%x%`,rev(betas[-j])) %*% apply(G,j,identity)
-  Delta <- apply(X,length(dim(X)),function(X_i) {
-    t(apply(X_i,j,identity)) %*% B_notj
-  })
-  covar_Bj <- chol2inv(chol(diag(1/prior_covar) + tcrossprod(Delta) / sig_y2,tol = 1e-18))
-  mean_Bj <- covar_Bj %*% (Delta %*% y_til / sig_y2)
-  out <- c(mean_Bj) + rnorm(length(mean_Bj)) %*% chol(covar_Bj)
+  N <- length(y_til)
+  B_notj <- as.matrix(Reduce(`%x%`,rev(betas[-j])) %*% apply(G,j,identity))
+  Delta <- kFold(X,c(j,length(dim(X)))) %*% B_notj |>
+    array(c(dim(X)[j],N,ncol(B_notj))) |>
+    aperm(c(1,3,2)) |>
+    c() |>
+    matrix(prod(dim(X)[j],ncol(B_notj)),tail(dim(X),1))
+  prec_Bj <- diag(1/prior_covar) + tcrossprod(Delta) / sig_y2
+  chol_prec_Bj <- Matrix::chol(prec_Bj)
+  mean_Bj <- Matrix::solve(prec_Bj, (Delta %*% y_til / sig_y2))
+  Z <- rnorm(length(mean_Bj))
+  out <- backsolve(chol_prec_Bj,Z)
+  out <- out + mean_Bj
   return(matrix(c(out),nrow(betas[[j]]),ncol(betas[[j]])))
 }
 
@@ -49,16 +75,19 @@ BTRT_draw_gam <- function(eta,Sig_0,mu_gam,y_til,sig_y2) {
 #' @param V local variance
 #' @param sig_y2 observational variance
 #'
+#' @importFrom Matrix chol solve
+#'
 #' @return Update to the core tensor
 #' @keywords internal
 BTRT_draw_G <- function(y_til, betas, X, z, V, sig_y2) {
   prior_covar <- z * c(V)
-  Delta <- apply(X,length(dim(X)),function(X_i) {
-    crossprod(Reduce(`%x%`,rev(betas)), c(X_i))
-  })
-  covar_G <- chol2inv(chol(diag(1/prior_covar) + tcrossprod(Delta) / sig_y2, tol = 1e-20))
-  mean_G <- covar_G %*% (Delta %*% y_til / sig_y2)
-  out <- c(mean_G) + rnorm(length(mean_G)) %*% chol(covar_G)
+  B_noG <- Reduce(`%x%`,rev(betas))
+  Delta <- crossprod(B_noG,matrix(c(X),ncol = tail(dim(X),1)))
+  prec_G <- diag(1/prior_covar) + tcrossprod(Delta) / sig_y2
+  chol_prec_G <- Matrix::chol(prec_G)
+  mean_G <- Matrix::solve(prec_G,(Delta %*% y_til / sig_y2))
+  Z <- rnorm(length(mean_G))
+  out <- backsolve(chol_prec_G,Z) + mean_G
   return(array(c(out),dim = sapply(betas,ncol)))
 }
 

@@ -1,14 +1,14 @@
 Package: bayestensorreg
 Type: Package
 Title: Bayesian Tensor Regression
-Version: 0.1.1
+Version: 0.1.2
 Author: Dan Spencer
 Maintainer: Dan Spencer <danieladamspencer@gmail.com>
 Description: This is a package with functions to perform Bayesian tensor 
   regression using tensor decomposition, as covered in my dissertation.
 License: LGPL-3
 Depends:
-    R (>= 3.6.0), 
+    R (>= 4.1.0), 
     stats
 Encoding: UTF-8
 LazyData: true
@@ -17,17 +17,18 @@ Imports:
     abind,
     doParallel,
     foreach,
+    ggplot2,
     GIGrvg,
     glmnet,
+    graphics,
+    grDevices,
+    Matrix,
     mvtnorm,
     neuRosim,
-    statmod,
-    truncnorm,
-    ggplot2,
     reshape2,
+    statmod,
     tidyr,
-    grDevices,
-    graphics
+    truncnorm
 Suggests: 
     knitr,
     DensParcorr,

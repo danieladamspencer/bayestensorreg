@@ -173,10 +173,9 @@ BTRTucker <-
       }
       # Draw sig_y2
       vecB <- c(Reduce(`%x%`, rev(betas)) %*% c(G))
+      XB <- c(crossprod(matrix(c(input$X), ncol = tail(dim(input$X), 1)), vecB))
       y_til <- input$y -
-        apply(input$X, length(dim(input$X)), function(X_i) {
-          crossprod(c(X_i), vecB)
-        }) -
+        XB -
         c(input$eta %*% gam)
       sig_y2 <-
         BTRT_draw_sig_y2(a.sig = a.sig,
@@ -184,24 +183,26 @@ BTRTucker <-
                         y_til = y_til)
       # Draw gam
       if (!all(c(input$eta) == 0)) {
-        y_til <- input$y -
-          apply(input$X, length(dim(input$X)), function(X_i) {
-            crossprod(c(X_i), vecB)
-          })
+        y_til <- input$y - XB
+          # apply(input$X, length(dim(input$X)), function(X_i) {
+          #   crossprod(c(X_i), vecB)
+          # })
         gam <- BTRT_draw_gam(input$eta, Sig_0, mu_gam, y_til, sig_y2)
       }
       # Find llik
-      llik <- sum(dnorm(
-        input$y,
-        sapply(asplit(input$X, length(dim(
-          input$X
-        ))),
-        function(bx)
-          crossprod(c(bx), vecB)) +
-          c(tcrossprod(gam, input$eta)),
-        sqrt(sig_y2),
-        log = TRUE
-      ))
+      # llik <- sum(dnorm(
+      #   input$y,
+      #   sapply(asplit(input$X, length(dim(
+      #     input$X
+      #   ))),
+      #   function(bx)
+      #     crossprod(c(bx), vecB)) +
+      #     c(tcrossprod(gam, input$eta)),
+      #   sqrt(sig_y2),
+      #   log = TRUE
+      # ))
+      llik <-
+        sum(dnorm(input$y, XB  + c(tcrossprod(gam, input$eta)), sqrt(sig_y2), log = T))
       # Store the results
       results$betas[[s]] <- betas
       results$W[[s]] <- W
