@@ -4,12 +4,12 @@
 \alias{cp_draw_gam_two}
 \title{Second way to draw gam from posterior FC}
 \usage{
-cp_draw_gam_two(eta, Sig_0, mu_gam, y_til, sig_y2)
+cp_draw_gam_two(eta, invSig_0, mu_gam, y_til, sig_y2)
 }
 \arguments{
 \item{eta}{design matrix}
 
-\item{Sig_0}{matrix}
+\item{invSig_0}{matrix}
 
 \item{mu_gam}{vector}
 

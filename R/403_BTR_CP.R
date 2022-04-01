@@ -45,7 +45,7 @@ BTR_CP <- function(input,max_rank = 1,n_iter = 100, n_burn = 0,hyperparameters =
     s_02 <- -log(0.95)
     a_sig <- 3
     b_sig <- 20
-    Sig_0 <- 900*diag(ncol(input$eta)) # From Guhaniyogi et al. [2017]
+    invSig_0 <- (1/900)*diag(ncol(input$eta)) # From Guhaniyogi et al. [2017]
     mu_gam = rep(0,ncol(input$eta)) # From Guhaniyogi et al. [2017]
     alpha_grid <- seq(max_rank^(-D),
                       max_rank^(-.1),
@@ -53,8 +53,8 @@ BTR_CP <- function(input,max_rank = 1,n_iter = 100, n_burn = 0,hyperparameters =
     a_tau <- 1 # This is what was in Shaan's code
     b_tau <- max_rank^(1/D - 1) # From Guhaniyogi et al. [2017]
   }else{
-    if(!is.list(hyperparameters)) stop("hyperparameters should be NULL or a list with the elements a_lam (a scalar), b_lam (a scalar), a_sig (a scalar), b_sig (a scalar), Sig_0 (a square matrix with dimension equal to the number of columns in eta), alpha_grid (a vector), a_tau (a scalar), and b_tau (a scalar)")
-    if(sum(as.numeric(c("a_lam","b_lam","nu","s_02","Sig_0","mu_gam","alpha_grid","a_tau","b_tau") %in% names(hyperparameters))) != 9) stop("hyperparameters should be NULL or a list with the elements a_lam (a scalar), b_lam (a scalar), a_sig (a scalar), b_sig (a scalar), Sig_0 (a square matrix with dimension equal to the number of columns in eta), alpha_grid (a vector), a_tau (a scalar), and b_tau (a scalar)")
+    if(!is.list(hyperparameters)) stop("hyperparameters should be NULL or a list with the elements a_lam (a scalar), b_lam (a scalar), a_sig (a scalar), b_sig (a scalar), invSig_0 (a square matrix with dimension equal to the number of columns in eta), alpha_grid (a vector), a_tau (a scalar), and b_tau (a scalar)")
+    if(sum(as.numeric(c("a_lam","b_lam","nu","s_02","invSig_0","mu_gam","alpha_grid","a_tau","b_tau") %in% names(hyperparameters))) != 9) stop("hyperparameters should be NULL or a list with the elements a_lam (a scalar), b_lam (a scalar), a_sig (a scalar), b_sig (a scalar), invSig_0 (a square matrix with dimension equal to the number of columns in eta), alpha_grid (a vector), a_tau (a scalar), and b_tau (a scalar)")
     list2env(hyperparameters,globalenv())
   }
 
@@ -127,26 +127,29 @@ BTR_CP <- function(input,max_rank = 1,n_iter = 100, n_burn = 0,hyperparameters =
     }
     # Draw sig_y2 ----
     B_s <- btr_compose_parafac(betas)
+    XB_s <- c(kFold(input$X,D + 1) %*% c(B_s))
     y_til <- input$y -
-      apply(input$X,length(dim(input$X)),function(X_i){
-        crossprod(c(X_i),c(B_s))
-      }) - c(input$eta %*% gam)
+      # apply(input$X,length(dim(input$X)),function(X_i){
+      #   crossprod(c(X_i),c(B_s))
+      # }) -
+      XB_s -
+      c(input$eta %*% gam)
     sig_y2 <- cp_draw_sig_y2_two(a_sig,b_sig, y_til)
     # Draw gam ----
     if(all(c(input$eta) != 0)){
-      y_til <- input$y -
-        apply(input$X,length(dim(input$X)),function(X_i){
-          crossprod(c(X_i),c(B_s))
-        })
-      gam <- cp_draw_gam_two(input$eta,Sig_0,mu_gam,y_til,sig_y2)
+      y_til <- input$y - XB_s
+        # apply(input$X,length(dim(input$X)),function(X_i){
+        #   crossprod(c(X_i),c(B_s))
+        # })
+      gam <- cp_draw_gam_two(input$eta,invSig_0,mu_gam,y_til,sig_y2)
     }
     # Calculate log-likelihood ----
     llik <- sum(dnorm(
-      input$y -
-        apply(input$X,
-              length(dim(input$X)),
-              function(X_i)
-                crossprod(c(X_i), c(B_s))) -
+      input$y - XB_s -
+        # apply(input$X,
+        #       length(dim(input$X)),
+        #       function(X_i)
+        #         crossprod(c(X_i), c(B_s))) -
         input$eta %*% gam,
       mean = 0,
       sd = sqrt(sig_y2),

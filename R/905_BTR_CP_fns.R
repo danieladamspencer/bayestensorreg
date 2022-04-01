@@ -136,6 +136,26 @@ btr_cp_all_B <- function(btr_cp_object) {
   return(out)
 }
 
+#' Produce a final estimate of the BTR CP tensor coefficient
+#'
+#' @param btr_cp_object an object of class \code{BTRCP_result}
+#'
+#' @return an array of the final tensor estimate found using sequential 2-means
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' input <- TR_simulated_data()
+#' result <- BTR_CP(input)
+#' final_B <- btr_cp_final_B(result)
+#' }
+btr_cp_final_B <- function(btr_cp_object) {
+  all_B <- btr_cp_all_B(btr_cp_object)
+  B_sd <- median(apply(all_B,seq(length(dim(all_B)) - 1),sd))
+  final_B <- s2m_B(all_B, sigma = B_sd)
+  return(final_B)
+}
+
 #' Draw betas from their posterior FCs
 #'
 #' @param X design array
@@ -151,28 +171,39 @@ btr_cp_all_B <- function(btr_cp_object) {
 #' @param r (scalar) rank index
 #'
 #' @importFrom stats rnorm
+#' @importFrom Matrix chol solve
 #'
 #' @return vector
 #' @keywords internal
 cp_draw_betas <- function(X,betas,sig_y2,y,gam,eta,W,Phi,tau,j,r) {
-  betas_l_r <- sapply(seq(length(betas))[-j],function(l){
-    betas[[l]][,r]
-  },simplify = FALSE)
-  B_not_j_r <- Reduce(`%o%`,betas_l_r)
-  H_jr <- t(apply(X,length(dim(X)),function(X_i){
-    crossprod(apply(X_i,j,identity), c(B_not_j_r))
-  }))
+  # betas_l_r <- sapply(seq(length(betas))[-j],function(l){
+  #   betas[[l]][,r]
+  # },simplify = FALSE)
+  betas_l_r <- sapply(betas[-j], function(x) x[,r], simplify = F)
+  B_not_j_r <- c(Reduce(`%o%`,betas_l_r))
+  H_jr <- (kFold(X,c(length(dim(X)),j)) %*% c(B_not_j_r)) |>
+    c() |> matrix(nrow = tail(dim(X),1))
+  # H_jr <- t(apply(X,length(dim(X)),function(X_i){
+  #   crossprod(apply(X_i,j,identity), c(B_not_j_r))
+  # }))
   if(ncol(betas[[j]]) > 1){
     betas_not_r <- sapply(betas,function(betas_j){betas_j[,-r,drop = F]},simplify = FALSE)
     B_not_r <- btr_compose_parafac(betas_not_r)
-    XB_not_r <- apply(X,length(dim(X)),function(X_i){crossprod(c(apply(X_i,j,identity)),c(B_not_r))})
+    XB_not_r <- c(kFold(X,length(dim(X))) %*% c(B_not_r))
+    # XB_not_r <- apply(X,length(dim(X)),function(X_i){crossprod(c(apply(X_i,j,identity)),c(B_not_r))})
   }else{
     XB_not_r <- 0
   }
   y_til <- y - c(eta %*% gam) - XB_not_r
-  Sigma <- chol2inv(chol(crossprod(H_jr)/sig_y2 + diag(1/W[[j]][,r])/(Phi[r]*tau)))
-  Mu <- Sigma%*%t(H_jr)%*%y_til/sig_y2
-  out <- c(Mu) + c(rnorm(nrow(betas[[j]])) %*% chol(Sigma))
+  Sig_inv <- crossprod(H_jr)/sig_y2 + diag(1/W[[j]][,r])/(Phi[r]*tau)
+  cholSig_inv <- Matrix::chol(Sig_inv)
+  Mu <- Matrix::solve(Sig_inv, (t(H_jr)%*%y_til/sig_y2))
+  Z <- rnorm(nrow(betas[[j]]))
+  out <- backsolve(cholSig_inv,Z)
+  out <- out + c(Mu)
+  # Sigma <- chol2inv(chol(crossprod(H_jr)/sig_y2 + diag(1/W[[j]][,r])/(Phi[r]*tau)))
+  # Mu <- Sigma%*%t(H_jr)%*%y_til/sig_y2
+  # out <- c(Mu) + c(rnorm(nrow(betas[[j]])) %*% chol(Sigma))
   return(out)
 }
 
@@ -233,19 +264,26 @@ cp_draw_gam <- function(eta,Sig_0,y_til,sig_y2) {
 #' Second way to draw gam from posterior FC
 #'
 #' @param eta design matrix
-#' @param Sig_0 matrix
+#' @param invSig_0 matrix
 #' @param mu_gam vector
 #' @param y_til vector
 #' @param sig_y2 scalar
 #'
 #' @importFrom stats rnorm
+#' @importFrom Matrix chol solve
 #'
 #' @return vector
 #' @keywords internal
-cp_draw_gam_two <- function(eta,Sig_0,mu_gam,y_til,sig_y2) {
-  Sig_gam <- solve(solve(Sig_0) + crossprod(eta)/sig_y2)
-  mu_gam <- Sig_gam %*% t(mu_gam%*%solve(Sig_0) + y_til%*%eta / sig_y2)
-  out <- mu_gam + chol(Sig_gam) %*% rnorm(ncol(eta))
+cp_draw_gam_two <- function(eta,invSig_0,mu_gam,y_til,sig_y2) {
+  invSig_gam <- invSig_0 + crossprod(eta)/sig_y2
+  mu_gam <- Matrix::solve(invSig_gam,t(mu_gam%*%invSig_gam + y_til%*%eta / sig_y2))
+  cholInvSig_gam <- Matrix::chol(invSig_gam)
+  Z <- rnorm(ncol(eta))
+  out <- backsolve(cholInvSig_gam,Z)
+  out <- out + mu_gam
+  # Sig_gam <- solve(solve(Sig_0) + crossprod(eta)/sig_y2)
+  # mu_gam <- Sig_gam %*% t(mu_gam%*%solve(Sig_0) + y_til%*%eta / sig_y2)
+  # out <- mu_gam + chol(Sig_gam) %*% rnorm(ncol(eta))
   return(c(out))
 }
 
