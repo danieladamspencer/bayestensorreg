@@ -53,11 +53,14 @@ FTRTucker <- function(input,ranks = NULL,epsilon = 1e-4,betas_LASSO = TRUE) {
     llik <- new_llik
     step_y <- input$y - c(tcrossprod(gam_new,input$eta))
     for(d in seq(length(dim(input$X)) - 1)) {
-      step_X <- t(apply(input$X,length(dim(input$X)),function(X_i){
-        X_id <- t(apply(X_i,d,identity))
-        XB_not_d <- X_id %*% Reduce(`%x%`,rev(beta_new[-d])) %*% apply(G_new,d,identity)
-        return(XB_not_d)
-      }))
+      # step_X <- t(apply(input$X,length(dim(input$X)),function(X_i){
+      #   X_id <- t(apply(X_i,d,identity))
+      #   XB_not_d <- X_id %*% Reduce(`%x%`,rev(beta_new[-d])) %*% apply(G_new,d,identity)
+      #   return(XB_not_d)
+      # }))
+      step_X <- kFold(input$X,c(d,length(dim(input$X)))) %*%
+        Reduce(`%x%`,rev(beta_new[-d])) %*% apply(G_new,d,identity) |>
+        matrix(nrow = tail(dim(input$X),1), byrow = T)
       if(betas_LASSO){
         cv.beta_new <- try(glmnet::cv.glmnet(step_X,step_y,type.measure = "mse",alpha = 1,
                                  family = "gaussian",intercept = FALSE))
@@ -76,7 +79,8 @@ FTRTucker <- function(input,ranks = NULL,epsilon = 1e-4,betas_LASSO = TRUE) {
       beta_new[[d]][is.na(beta_new[[d]])] <- 0 # In some cases with MRI data, all scan values are equal to zero.
       beta_new[[d]][seq(ranks[d]),] <- 1
     }
-    step_X <- t(apply(input$X,length(dim(input$X)),function(X_i) t(Reduce(`%x%`,rev(beta_new)))%*%c(X_i)))
+    # step_X <- t(apply(input$X,length(dim(input$X)),function(X_i) t(Reduce(`%x%`,rev(beta_new)))%*%c(X_i)))
+    step_X <- kFold(input$X, length(dim(input$X))) %*% Reduce(`%x%`,rev(beta_new))
     if(nrow(step_X) == 1) step_X <- t(step_X)
     if(length(G_new) < 2){
       G_new <- array(lm(step_y ~ -1 + step_X)$coefficients,dim = ranks)
@@ -90,9 +94,8 @@ FTRTucker <- function(input,ranks = NULL,epsilon = 1e-4,betas_LASSO = TRUE) {
         G_new <- array(c(lm(step_y ~ -1 + step_X)$coefficients), dim = ranks)
       }
     }
-    gam_new <- lm(input$y - apply(input$X,length(dim(input$X)),function(X_i){
-      crossprod(c(X_i),c(compose_tucker_ftr_vec(beta_new,G_new)))
-    }) ~ -1 + input$eta)$coefficients
+    BX <- c(kFold(input$X,length(dim(input$X))) %*% compose_tucker_ftr_vec(beta_new,G_new))
+    gam_new <- lm(input$y - BX ~ -1 + input$eta)$coefficients
     new_llik <- ftr_log_likelihood(input,compose_tucker_ftr_vec(beta_new,G_new),gam_new)
   }
   return(list(gam = gam_old,B = array(compose_tucker_ftr_vec(beta_old,G_old),
