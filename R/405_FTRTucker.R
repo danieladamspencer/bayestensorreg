@@ -21,23 +21,42 @@
 #'   log-likelihood) and \code{total_time} (time spent to complete the analysis).
 #' @export
 #'
+#' @importFrom parallel detectCores makeCluster parApply stopCluster
+#'
 #' @examples
 #' \dontrun{
 #' input <- TR_simulated_data()
 #' results <- FTRTucker(input)
 #' }
-FTRTucker <- function(input,ranks = NULL,epsilon = 1e-4,betas_LASSO = TRUE) {
+FTRTucker <- function(input,ranks = NULL,epsilon = 1e-4,betas_LASSO = TRUE,num_threads = NULL) {
   start_time <- proc.time()[3]
-  if(is.null(ranks)) ranks <- rep(1,length(dim(input$X)) - 1)
+  Dim <- length(dim(input$X)) - 1
+  if(is.null(ranks)) ranks <- rep(1,Dim)
   gam_lm <- lm(input$y ~ -1 + input$eta)
   cat("Log-likelihood without tensor:",logLik(gam_lm),"\n")
   gam_new <- gam_lm$coefficients
-  beta_new <- mapply(function(p_j,r_j) {
-    out <- matrix(rnorm(p_j*r_j,sd = 0.025),p_j,r_j)
-    out[seq(r_j),] <- 1
-    return(out)
-  },p_j = head(dim(input$X),-1),r_j = ranks,SIMPLIFY = FALSE)
-  G_new <- array(rnorm(prod(ranks)),dim = ranks)
+  ytil <- c(input$y - input$eta %*% gam_new)
+  avail_threads <- parallel::detectCores() - 1
+  cl <- parallel::makeCluster(avail_threads)
+  B_init <- parallel::parApply(cl,input$X, seq(Dim), function(x) {
+    return(lm(ytil ~ -1 + x)$coefficients)
+  })
+  parallel::stopCluster(cl)
+  beta_new <- sapply(seq(Dim), function(d) {
+    b_d <- svd(kFold(B_init,d), nu = ranks[d], nv = ranks[d])$u
+    return(b_d)
+  }, simplify = F)
+  G_new <- sapply(ranks, function(r) seq(r), simplify = F) |>
+    expand.grid() |>
+    apply(1,function(x) length(unique(x)) == 1) |>
+    as.numeric() |>
+    array(dim = ranks)
+  # beta_new <- mapply(function(p_j,r_j) {
+  #   out <- matrix(rnorm(p_j*r_j,sd = 0.025),p_j,r_j)
+  #   out[seq(r_j),] <- 1
+  #   return(out)
+  # },p_j = head(dim(input$X),-1),r_j = ranks,SIMPLIFY = FALSE)
+  # G_new <- array(rnorm(prod(ranks)),dim = ranks)
   G_old <- G_new
   beta_old <- beta_new
   gam_old <- gam_new

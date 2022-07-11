@@ -4,7 +4,13 @@
 \alias{FTRTucker}
 \title{Frequentist tensor regression with the Tucker decomposition}
 \usage{
-FTRTucker(input, ranks = NULL, epsilon = 1e-04, betas_LASSO = TRUE)
+FTRTucker(
+  input,
+  ranks = NULL,
+  epsilon = 1e-04,
+  betas_LASSO = TRUE,
+  num_threads = NULL
+)
 }
 \arguments{
 \item{input}{An object of class \code{TR_data} that contains (at least) the

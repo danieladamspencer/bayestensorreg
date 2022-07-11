@@ -44,15 +44,15 @@ BTRTucker <-
     if (length(input$eta) == 0)
       input$eta <- matrix(0, nrow = length(input$y), ncol = 1)
     # Pull input statistics
-    D <- length(dim(input$X)) - 1
-    if (length(ranks) != D)
+    Dim <- length(dim(input$X)) - 1
+    if (length(ranks) != Dim)
       stop("The length of ranks should be equal to the dimension of each subject's tensor covariate.")
     n <- length(input$y)
     p <- head(dim(input$X), -1)
 
     # Set hyperparameters
     a.lam <- 3 # From Guhaniyogi et al. [2017]
-    b.lam <- a.lam ^ (1 / (2 * D)) # From Guhaniyogi et al. [2017]
+    b.lam <- a.lam ^ (1 / (2 * Dim)) # From Guhaniyogi et al. [2017]
     nu <- 2 # From Guhaniyogi et al. [2017]
     s_02 <- -log(0.95)
     a.sig <- 3
@@ -64,16 +64,16 @@ BTRTucker <-
       if (r == 1) {
         NULL
       } else{
-        seq(r ^ (-D), r ^ (-.10), length.out = 10)
+        seq(r ^ (-Dim), r ^ (-.10), length.out = 10)
       }
     }, simplify = FALSE) # Based off of Guhaniyogi et al. [2017]
     a.tau <- 1 # This is what was in Shaan's code
-    b.tau <- min(ranks) ^ (1 / D - 1) # From Guhaniyogi et al. [2017]
+    b.tau <- min(ranks) ^ (1 / Dim - 1) # From Guhaniyogi et al. [2017]
     a.u <- 3
-    b.u <- a.u ^ (1 / (2 * D)) # Based off of Guhaniyogi et al. [2017]
+    b.u <- a.u ^ (1 / (2 * Dim)) # Based off of Guhaniyogi et al. [2017]
     a.z <- 1
     b.z <-
-      min(ranks) ^ (1 / D - 1) # Based off of Guhaniyogi et al. [2017]
+      min(ranks) ^ (1 / Dim - 1) # Based off of Guhaniyogi et al. [2017]
 
     if(!is.null(hyperparameters))
       list2env(hyperparameters, envir = environment())
@@ -112,15 +112,15 @@ BTRTucker <-
       )
 
     # Set initial conditions
-    betas <-
-      mapply(
-        function(ps, r)
-          matrix(rnorm(ps * r, sd = 0.025 * r), ps, r),
-        ps = p,
-        r = ranks,
-        SIMPLIFY = FALSE
-      )
-    G <- array(rnorm(prod(ranks), sd = 1), dim = ranks)
+    # betas <-
+    #   mapply(
+    #     function(ps, r)
+    #       matrix(rnorm(ps * r, sd = 0.025 * r), ps, r),
+    #     ps = p,
+    #     r = ranks,
+    #     SIMPLIFY = FALSE
+    #   )
+    # G <- array(rnorm(prod(ranks), sd = 1), dim = ranks)
     V <- array(1, dim = ranks)
     z <- 1
     U <- array(1, dim = ranks)
@@ -135,6 +135,22 @@ BTRTucker <-
     tau <- 1
     gam <- lm(input$y ~ -1 + input$eta)$coefficients
     gam <- ifelse(is.na(gam), 0, gam)
+    y_til <- input$y - c(tcrossprod(t(gam), input$eta))
+    avail_threads <- parallel::detectCores() - 1
+    cl <- parallel::makeCluster(avail_threads)
+    B_init <- parallel::parApply(cl,input$X, seq(Dim), function(x) {
+      return(lm(y_til ~ -1 + x)$coefficients)
+    })
+    parallel::stopCluster(cl)
+    betas <- sapply(seq(Dim), function(d) {
+      b_d <- svd(kFold(B_init,d), nu = ranks[d], nv = ranks[d])$u
+      return(b_d)
+    }, simplify = F)
+    G <- sapply(ranks, function(r) seq(r), simplify = F) |>
+      expand.grid() |>
+      apply(1,function(x) length(unique(x)) == 1) |>
+      as.numeric() |>
+      array(dim = ranks)
     sig_y2 <- var(input$y)
     # Begin MCMC
     start_MCMC <- proc.time()[3]
@@ -143,7 +159,7 @@ BTRTucker <-
       lam <- BTRT_draw_lam(a.lam, b.lam, betas, tau)
       W <- BTRT_draw_omega(lam, betas, tau)
       y_til <- input$y - c(tcrossprod(t(gam), input$eta))
-      for (j in seq(D)) {
+      for (j in seq(Dim)) {
         betas[[j]] <-
           BTRT_draw_Bj(
             y_til = y_til,
