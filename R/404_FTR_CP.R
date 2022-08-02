@@ -8,6 +8,8 @@
 #' @param epsilon a value for the stopping rule of the algorithm. Specifically,
 #'   this is the upper bound for the differences in the log-likelihood between
 #'   two iterations of the algorithm.
+#' @param max.iter the maximum number of iterations to use before stopping the
+#'   algorithm
 #'
 #' @importFrom glmnet cv.glmnet
 #' @importFrom stats rnorm
@@ -22,7 +24,7 @@
 #' input <- TR_simulated_data()
 #' results <- FTR_CP(input$y, input$X, input$eta)
 #' }
-FTR_CP <- function(input,rank = 1,epsilon = 1e-8) {
+FTR_CP <- function(input,rank = 1,epsilon = 1e-8,max.iter = 1000) {
   start_model <- proc.time()[3]
   gam_new <- lm(input$y ~ -1 + input$eta)$coefficients
   beta_new <- sapply(head(dim(input$X),-1),function(p_j) matrix(rnorm(p_j*rank,sd = 0.025),p_j,rank),simplify = FALSE)
@@ -31,7 +33,7 @@ FTR_CP <- function(input,rank = 1,epsilon = 1e-8) {
   beta_old <- beta_new
   gam_old <- gam_new
   step <- 1
-  while(abs(new_llik - llik) > epsilon) {
+  while((abs(new_llik - llik) > epsilon) & step <= max.iter) {
     cat("Step",step,"Log-likelihood",new_llik,"\n")
     beta_old <- beta_new
     gam_old <- gam_new
@@ -62,5 +64,15 @@ FTR_CP <- function(input,rank = 1,epsilon = 1e-8) {
     }) ~ -1 + input$eta)$coefficients
     new_llik <- ftr_log_likelihood(input,B,gam_new)
   }
-  return(list(gam = gam_old,betas = beta_old,B = compose_parafac(beta_old),llik = llik, total_time = proc.time()[3] - start_model))
+  convergence <- step < max.iter
+  return(
+    list(
+      gam = gam_old,
+      betas = beta_old,
+      B = compose_parafac(beta_old),
+      llik = llik,
+      convergence = convergence,
+      total_time = proc.time()[3] - start_model
+    )
+  )
 }

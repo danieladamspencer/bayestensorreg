@@ -9,7 +9,8 @@ FTRTucker(
   ranks = NULL,
   epsilon = 1e-04,
   betas_LASSO = TRUE,
-  num_threads = NULL
+  num_threads = NULL,
+  max.iter = 1000
 )
 }
 \arguments{
@@ -27,6 +28,11 @@ two iterations of the algorithm.}
 
 \item{betas_LASSO}{(logical) Should the LASSO be applied to the betas in the
 Tucker tensor decomposition? Defaults to \code{TRUE}.}
+
+\item{num_threads}{number of threads to use when finding the initial values}
+
+\item{max.iter}{the maximum number of iterations to use before stopping the
+algorithm}
 }
 \value{
 A list with elements \code{gam} (vector coefficient result),

@@ -11,6 +11,9 @@
 #'   two iterations of the algorithm.
 #' @param betas_LASSO (logical) Should the LASSO be applied to the betas in the
 #'   Tucker tensor decomposition? Defaults to \code{TRUE}.
+#' @param num_threads number of threads to use when finding the initial values
+#' @param max.iter the maximum number of iterations to use before stopping the
+#'   algorithm
 #'
 #' @importFrom stats lm rnorm logLik coef
 #' @import glmnet
@@ -28,7 +31,7 @@
 #' input <- TR_simulated_data()
 #' results <- FTRTucker(input)
 #' }
-FTRTucker <- function(input,ranks = NULL,epsilon = 1e-4,betas_LASSO = TRUE,num_threads = NULL) {
+FTRTucker <- function(input,ranks = NULL,epsilon = 1e-4,betas_LASSO = TRUE,num_threads = NULL, max.iter = 1000) {
   start_time <- proc.time()[3]
   Dim <- length(dim(input$X)) - 1
   if(is.null(ranks)) ranks <- rep(1,Dim)
@@ -37,7 +40,9 @@ FTRTucker <- function(input,ranks = NULL,epsilon = 1e-4,betas_LASSO = TRUE,num_t
   gam_new <- gam_lm$coefficients
   ytil <- c(input$y - input$eta %*% gam_new)
   avail_threads <- parallel::detectCores() - 1
-  cl <- parallel::makeCluster(avail_threads)
+  if(is.null(num_threads)) num_threads <- avail_threads
+  num_threads <- min(num_threads, avail_threads)
+  cl <- parallel::makeCluster(num_threads)
   B_init <- parallel::parApply(cl,input$X, seq(Dim), function(x, ytil) {
     return(lm(ytil ~ -1 + x)$coefficients)
   }, ytil = ytil)
@@ -63,7 +68,7 @@ FTRTucker <- function(input,ranks = NULL,epsilon = 1e-4,betas_LASSO = TRUE,num_t
   llik <- ftr_log_likelihood(input,compose_tucker_ftr_vec(beta_new,G_new),gam_new)
   new_llik <- max(1000, 5*epsilon)
   step <- 1
-  while(abs(new_llik - llik) > epsilon) {
+  while((abs(new_llik - llik) > epsilon) & (step <= max.iter)) {
     cat("Step",step,"Log-likelihood",new_llik,"\n")
     G_old <- G_new
     beta_old <- beta_new
@@ -131,8 +136,10 @@ FTRTucker <- function(input,ranks = NULL,epsilon = 1e-4,betas_LASSO = TRUE,num_t
     gam_new <- lm(input$y - BX ~ -1 + input$eta)$coefficients
     new_llik <- ftr_log_likelihood(input,compose_tucker_ftr_vec(beta_new,G_new),gam_new)
   }
+  convergence <- step < max.iter
   return(list(gam = gam_old,B = array(compose_tucker_ftr_vec(beta_old,G_old),
                                       dim = head(dim(input$X),-1)),
               betas = beta_old, G = G_old, llik = llik,
+              convergence = convergence,
               total_time = proc.time()[3] - start_time))
 }

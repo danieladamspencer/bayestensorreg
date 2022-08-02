@@ -4,7 +4,7 @@
 \alias{FTR_CP}
 \title{Frequentist Tensor Regression with the CP decomposition}
 \usage{
-FTR_CP(input, rank = 1, epsilon = 1e-08)
+FTR_CP(input, rank = 1, epsilon = 1e-08, max.iter = 1000)
 }
 \arguments{
 \item{input}{An object of class \code{TR_data} that contains (at least) the
@@ -17,6 +17,9 @@ can also be included. Other list elements will be ignored.}
 \item{epsilon}{a value for the stopping rule of the algorithm. Specifically,
 this is the upper bound for the differences in the log-likelihood between
 two iterations of the algorithm.}
+
+\item{max.iter}{the maximum number of iterations to use before stopping the
+algorithm}
 }
 \value{
 A list with elements \code{gam} (vector coefficient result),
