@@ -27,11 +27,11 @@ FTR_CP <- function(input,rank = 1,epsilon = 1e-8) {
   gam_new <- lm(input$y ~ -1 + input$eta)$coefficients
   beta_new <- sapply(head(dim(input$X),-1),function(p_j) matrix(rnorm(p_j*rank,sd = 0.025),p_j,rank),simplify = FALSE)
   llik <- ftr_log_likelihood(input,compose_parafac(beta_new),gam_new)
-  new_llik <- llik + max(epsilon,1)
+  new_llik <- llik + max(epsilon,1000)
   beta_old <- beta_new
   gam_old <- gam_new
   step <- 1
-  while(new_llik - llik > epsilon) {
+  while(abs(new_llik - llik) > epsilon) {
     cat("Step",step,"Log-likelihood",new_llik,"\n")
     beta_old <- beta_new
     gam_old <- gam_new
@@ -39,7 +39,7 @@ FTR_CP <- function(input,rank = 1,epsilon = 1e-8) {
     llik <- new_llik
     step_y <- input$y - c(tcrossprod(gam_new,input$eta))
     for(d in seq(length(dim(input$X)) - 1)) {
-      cat(d,"\n")
+      # cat(d,"\n")
       step_X <- t(apply(input$X,length(dim(input$X)),function(X_i){
         X_id <- t(apply(X_i,d,identity))
         XB_not_d <- X_id %*% Reduce(khatri_rao,beta_new[-d])

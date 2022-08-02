@@ -38,9 +38,9 @@ FTRTucker <- function(input,ranks = NULL,epsilon = 1e-4,betas_LASSO = TRUE,num_t
   ytil <- c(input$y - input$eta %*% gam_new)
   avail_threads <- parallel::detectCores() - 1
   cl <- parallel::makeCluster(avail_threads)
-  B_init <- parallel::parApply(cl,input$X, seq(Dim), function(x) {
+  B_init <- parallel::parApply(cl,input$X, seq(Dim), function(x, ytil) {
     return(lm(ytil ~ -1 + x)$coefficients)
-  })
+  }, ytil = ytil)
   parallel::stopCluster(cl)
   beta_new <- sapply(seq(Dim), function(d) {
     b_d <- svd(kFold(B_init,d), nu = ranks[d], nv = ranks[d])$u
@@ -61,9 +61,9 @@ FTRTucker <- function(input,ranks = NULL,epsilon = 1e-4,betas_LASSO = TRUE,num_t
   beta_old <- beta_new
   gam_old <- gam_new
   llik <- ftr_log_likelihood(input,compose_tucker_ftr_vec(beta_new,G_new),gam_new)
-  new_llik <- llik + 5*epsilon
+  new_llik <- max(1000, 5*epsilon)
   step <- 1
-  while(new_llik - llik > epsilon) {
+  while(abs(new_llik - llik) > epsilon) {
     cat("Step",step,"Log-likelihood",new_llik,"\n")
     G_old <- G_new
     beta_old <- beta_new
@@ -77,9 +77,23 @@ FTRTucker <- function(input,ranks = NULL,epsilon = 1e-4,betas_LASSO = TRUE,num_t
       #   XB_not_d <- X_id %*% Reduce(`%x%`,rev(beta_new[-d])) %*% apply(G_new,d,identity)
       #   return(XB_not_d)
       # }))
-      step_X <- kFold(input$X,c(d,length(dim(input$X)))) %*%
-        Reduce(`%x%`,rev(beta_new[-d])) %*% apply(G_new,d,identity) |>
-        matrix(nrow = tail(dim(input$X),1), byrow = T)
+      step_X <- kFold(input$X,c(d,length(dim(input$X))))
+      step_B <- Reduce(`%x%`,rev(beta_new[-d])) %*% apply(G_new,d,identity)
+      # cat("d =",d,"min(B) =",min(c(step_B)),"max(B) =",max(c(step_B)),"\n")
+      if(abs(min(c(step_B))) < .Machine$double.eps &
+         abs(max(c(step_B))) < .Machine$double.eps) {
+        message("Tensor coefficient computationally zero.")
+        beta_old[[d]] <- matrix(0,nrow = dim(input$X)[d], ncol = ranks[d])
+        return(list(gam = gam_old,B = array(compose_tucker_ftr_vec(beta_old,G_old),
+                                            dim = head(dim(input$X),-1)),
+                    betas = beta_old, G = G_old, llik = llik,
+                    total_time = proc.time()[3] - start_time))
+      }
+      step_XB <- step_X %*% step_B
+      step_X <- matrix(step_XB, nrow = tail(dim(input$X),1), byrow = T)
+      # step_X <- kFold(input$X,c(d,length(dim(input$X)))) %*%
+      #   Reduce(`%x%`,rev(beta_new[-d])) %*% apply(G_new,d,identity) |>
+      #   matrix(nrow = tail(dim(input$X),1), byrow = T)
       if(betas_LASSO){
         cv.beta_new <- try(glmnet::cv.glmnet(step_X,step_y,type.measure = "mse",alpha = 1,
                                  family = "gaussian",intercept = FALSE))
