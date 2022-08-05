@@ -139,7 +139,9 @@ BTRTucker <-
     avail_threads <- parallel::detectCores() - 1
     cl <- parallel::makeCluster(avail_threads)
     B_init <- parallel::parApply(cl,input$X, seq(Dim), function(x) {
-      return(lm(y_til ~ -1 + x)$coefficients)
+      out <- lm(y_til ~ -1 + x)$coefficients
+      if(is.na(out)) out <- 0 # This is for some cases where there are values outside a mask
+      return(out)
     })
     parallel::stopCluster(cl)
     betas <- sapply(seq(Dim), function(d) {
