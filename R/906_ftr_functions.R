@@ -12,11 +12,12 @@
 #' @return scalar
 #' @keywords internal
 ftr_log_likelihood <- function(input,B,gam) {
-  out <- sum(dnorm(input$y -
-                     c(tcrossprod(gam,input$eta)) -
-                     apply(input$X,length(dim(input$X)),function(x){
-                       crossprod(c(x),c(B))
-                     }),log = TRUE))
+  gam_eta <- c(tcrossprod(gam,input$eta))
+  XB <- apply(input$X,length(dim(input$X)),function(x){
+    crossprod(c(x),c(B))
+  })
+  y_res <- input$y - gam_eta - XB
+  out <- sum(dnorm(y_res, sd = sd(y_res),log = TRUE))
   return(out)
 }
 
@@ -105,17 +106,20 @@ khatri_rao <- function(A,B = NULL) {
 #' @return array
 #' @keywords internal
 compose_tucker_ftr <- function(bb,gg) {
-  rr <- sapply(bb,ncol)
-  if(all(rr == 1)){
-    output <- Reduce(outer,sapply(bb,c,simplify = FALSE))
-  }else{
-    rank_combos <- expand.grid(sapply(rr,seq))
-    if(length(unique(rr)) == 1) rank_combos <- as.matrix(t(rank_combos))
-    tucker_summands <- mapply(function(which_ranks,g) {
-      Reduce(outer,mapply(function(b,r){b[,r]},b = bb, r = which_ranks,SIMPLIFY = FALSE)) * g
-    },which_ranks = split(as.matrix(rank_combos),row(rank_combos)),g = c(gg),SIMPLIFY = FALSE)
-    output <- Reduce(`+`,tucker_summands)
-  }
+  # rr <- sapply(bb,ncol)
+  # if(all(rr == 1)){
+  #   output <- Reduce(outer,sapply(bb,c,simplify = FALSE))
+  # }else{
+  #   rank_combos <- expand.grid(sapply(rr,seq))
+  #   if(length(unique(rr)) == 1) rank_combos <- as.matrix(t(rank_combos))
+  #   tucker_summands <- mapply(function(which_ranks,g) {
+  #     Reduce(outer,mapply(function(b,r){b[,r]},b = bb, r = which_ranks,SIMPLIFY = FALSE)) * g
+  #   },which_ranks = split(as.matrix(rank_combos),row(rank_combos)),g = c(gg),SIMPLIFY = FALSE)
+  #   output <- Reduce(`+`,tucker_summands)
+  # }
+  all_dims <- sapply(bb, nrow)
+  vec_out <- compose_tucker_ftr_vec(bb,gg)
+  output <- array(vec_out, dim = all_dims)
   return(output)
 }
 

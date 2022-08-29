@@ -148,11 +148,15 @@ BTRTucker <-
       b_d <- svd(kFold(B_init,d), nu = ranks[d], nv = ranks[d])$u
       return(b_d)
     }, simplify = F)
-    G <- sapply(ranks, function(r) seq(r), simplify = F) |>
-      expand.grid() |>
-      apply(1,function(x) length(unique(x)) == 1) |>
-      as.numeric() |>
-      array(dim = ranks)
+    vec_B_new <- Reduce(`%x%`,betas)
+    vec_XB <- crossprod(vec_B_new,apply(input$X, Dim + 1, identity))
+    G_init <- lm(y_til ~ -1 + t(vec_XB))$coefficients
+    G <- array(G_init, dim = ranks)
+    # G <- sapply(ranks, function(r) seq(r), simplify = F) |>
+    #   expand.grid() |>
+    #   apply(1,function(x) length(unique(x)) == 1) |>
+    #   as.numeric() |>
+    #   array(dim = ranks)
     sig_y2 <- var(input$y)
     # Begin MCMC
     start_MCMC <- proc.time()[3]

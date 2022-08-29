@@ -17,6 +17,8 @@
 #' @param save_dir (a character) A path to a directory in which the temporary
 #'   results will be saved. Defaults to \code{NULL}. If \code{NULL}, then
 #'   temporary saves are not made.
+#' @param num_threads the number of threads that can be used to find initial
+#'   conditions
 #'
 #' @importFrom stats rnorm dgamma
 #'
@@ -28,7 +30,7 @@
 #' input <- TR_simulated_data()
 #' results <- BTR_CP(input)
 #' }
-BTR_CP <- function(input,max_rank = 1,n_iter = 100, n_burn = 0,hyperparameters = NULL, save_dir = NULL) {
+BTR_CP <- function(input,max_rank = 1,n_iter = 100, n_burn = 0,hyperparameters = NULL, save_dir = NULL, num_threads = NULL) {
   # Logic checks for data compatibility
   if(length(input$eta) == 0) input$eta <- matrix(0,nrow = length(input$y), ncol = 1)
   if(sum(as.numeric(c("y","X","eta") %in% names(input))) != 3) stop("Input must be a list with at least the elements y, X, and eta.")
@@ -72,11 +74,24 @@ BTR_CP <- function(input,max_rank = 1,n_iter = 100, n_burn = 0,hyperparameters =
     )
 
   # Set initials ----
-  betas <- sapply(seq(D),function(j){
-    matrix(rnorm(p[j]*max_rank,sd = 0.025),p[j],max_rank)
-  },simplify = FALSE)
+  # betas <- sapply(seq(D),function(j){
+  #   matrix(rnorm(p[j]*max_rank,sd = 0.025),p[j],max_rank)
+  # },simplify = FALSE)
   gam <- lm(input$y ~ -1 + input$eta)$coefficients
-  if(is.na(gam)) gam <- 0
+  if(any(is.na(gam))) gam <- 0
+  ytil <- c(input$y - input$eta %*% gam)
+  avail_threads <- parallel::detectCores() - 1
+  if(is.null(num_threads)) num_threads <- avail_threads
+  num_threads <- min(num_threads, avail_threads)
+  cl <- parallel::makeCluster(num_threads)
+  B_init <- parallel::parApply(cl,input$X, seq(D), function(x, ytil) {
+    return(lm(ytil ~ -1 + x)$coefficients)
+  }, ytil = ytil)
+  parallel::stopCluster(cl)
+  betas <- sapply(seq(D), function(d) {
+    b_d <- svd(kFold(B_init,d), nu = max_rank, nv = max_rank)$u
+    return(b_d)
+  }, simplify = F)
   lam <- sapply(seq(D),function(d) rep(1,max_rank), simplify = FALSE)
   tau <- 1
   sig_y2 <- 1

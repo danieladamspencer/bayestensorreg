@@ -29,12 +29,12 @@ FTR_CP <- function(input,rank = 1,epsilon = 1e-8,max.iter = 1000) {
   gam_new <- lm(input$y ~ -1 + input$eta)$coefficients
   beta_new <- sapply(head(dim(input$X),-1),function(p_j) matrix(rnorm(p_j*rank,sd = 0.025),p_j,rank),simplify = FALSE)
   llik <- ftr_log_likelihood(input,compose_parafac(beta_new),gam_new)
-  new_llik <- llik + max(epsilon,1000)
+  new_llik <- llik #- llik*max(epsilon,1000)
   beta_old <- beta_new
   gam_old <- gam_new
   step <- 1
-  while((abs(new_llik - llik) > epsilon) & step <= max.iter) {
-    cat("Step",step,"Log-likelihood",new_llik,"\n")
+  while((abs(100*(new_llik - llik)/llik) > epsilon & step <= max.iter & (new_llik - llik) > 0) | step == 1) {
+    cat("Step",step,"Log-likelihood",new_llik,", % change:",abs((new_llik - llik)/llik)*100,"\n")
     beta_old <- beta_new
     gam_old <- gam_new
     step <- step + 1
@@ -54,6 +54,7 @@ FTR_CP <- function(input,rank = 1,epsilon = 1e-8,max.iter = 1000) {
         beta_new[[d]] <- matrix(c(as.matrix(coef(cv.beta_new,s = "lambda.min"))[-1,]),
                                 ncol = rank)
       }else{
+        cat("LASSO fit for betas FAILED.\n")
         beta_new[[d]] <- matrix(c(lm(step_y ~ -1 + step_X)$coefficients), ncol = rank)
       }
       beta_new[[d]][is.na(beta_new[[d]])] <- 0 # In some cases with MRI data, all scan values are equal to zero.

@@ -7,7 +7,7 @@
 FTRTucker(
   input,
   ranks = NULL,
-  epsilon = 1e-04,
+  epsilon = 0.1,
   betas_LASSO = TRUE,
   num_threads = NULL,
   max.iter = 1000
