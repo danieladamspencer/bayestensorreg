@@ -7,10 +7,10 @@
 FTRTucker(
   input,
   ranks = NULL,
-  epsilon = 0.1,
-  betas_LASSO = TRUE,
-  num_threads = NULL,
-  max.iter = 1000
+  epsilon = 1e-04,
+  betas_LASSO = FALSE,
+  G_LASSO = FALSE,
+  step_limit = 1000
 )
 }
 \arguments{
@@ -27,12 +27,13 @@ this is the upper bound for the differences in the log-likelihood between
 two iterations of the algorithm.}
 
 \item{betas_LASSO}{(logical) Should the LASSO be applied to the betas in the
-Tucker tensor decomposition? Defaults to \code{TRUE}.}
+Tucker tensor decomposition? Defaults to \code{FALSE}.}
 
-\item{num_threads}{number of threads to use when finding the initial values}
+\item{G_LASSO}{(logical) Should the LASSO be applied to the core tensor in the
+Tucker tensor decomposition? Defaults to \code{FALSE}.}
 
-\item{max.iter}{the maximum number of iterations to use before stopping the
-algorithm}
+\item{step_limit}{The maximum number of steps that can be taken before
+deciding that the algorithm did not converge}
 }
 \value{
 A list with elements \code{gam} (vector coefficient result),

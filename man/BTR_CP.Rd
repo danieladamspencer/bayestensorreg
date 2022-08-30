@@ -10,7 +10,8 @@ BTR_CP(
   n_iter = 100,
   n_burn = 0,
   hyperparameters = NULL,
-  save_dir = NULL
+  save_dir = NULL,
+  num_threads = NULL
 )
 }
 \arguments{
@@ -34,6 +35,9 @@ model. If \code{NULL}, then default values will be used.}
 \item{save_dir}{(a character) A path to a directory in which the temporary
 results will be saved. Defaults to \code{NULL}. If \code{NULL}, then
 temporary saves are not made.}
+
+\item{num_threads}{the number of threads that can be used to find initial
+conditions}
 }
 \value{
 A list with the posterior samples

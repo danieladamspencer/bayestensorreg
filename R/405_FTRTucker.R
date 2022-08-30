@@ -10,10 +10,11 @@
 #'   this is the upper bound for the differences in the log-likelihood between
 #'   two iterations of the algorithm.
 #' @param betas_LASSO (logical) Should the LASSO be applied to the betas in the
-#'   Tucker tensor decomposition? Defaults to \code{TRUE}.
-#' @param num_threads number of threads to use when finding the initial values
-#' @param max.iter the maximum number of iterations to use before stopping the
-#'   algorithm
+#'   Tucker tensor decomposition? Defaults to \code{FALSE}.
+#' @param G_LASSO (logical) Should the LASSO be applied to the core tensor in the
+#'   Tucker tensor decomposition? Defaults to \code{FALSE}.
+#' @param step_limit The maximum number of steps that can be taken before
+#'   deciding that the algorithm did not converge
 #'
 #' @importFrom stats lm rnorm logLik coef
 #' @import glmnet
@@ -24,63 +25,38 @@
 #'   log-likelihood) and \code{total_time} (time spent to complete the analysis).
 #' @export
 #'
-#' @importFrom parallel detectCores makeCluster parApply stopCluster
-#'
 #' @examples
 #' \dontrun{
 #' input <- TR_simulated_data()
 #' results <- FTRTucker(input)
 #' }
-FTRTucker <- function(input,ranks = NULL,epsilon = 1e-1,betas_LASSO = TRUE,num_threads = NULL, max.iter = 1000) {
+FTRTucker <-
+  function(
+    input,
+    ranks = NULL,
+    epsilon = 1e-4,
+    betas_LASSO = FALSE,
+    G_LASSO = FALSE,
+    step_limit = 1000
+    ) {
   start_time <- proc.time()[3]
-  Dim <- length(dim(input$X)) - 1
+  Dim <- length(dim(input$X))-1
   sample_size <- length(input$y)
   if(is.null(ranks)) ranks <- rep(1,Dim)
   gam_lm <- lm(input$y ~ -1 + input$eta)
   llik <- c(logLik(gam_lm))
   cat("Log-likelihood without tensor:",llik,"\n")
   gam_new <- gam_lm$coefficients
-  ytil <- c(input$y - input$eta %*% gam_new)
-  # # > Informed initial ----
-  # avail_threads <- parallel::detectCores() - 1
-  # if(is.null(num_threads)) num_threads <- avail_threads
-  # num_threads <- min(num_threads, avail_threads)
-  # cl <- parallel::makeCluster(num_threads)
-  # B_init <- parallel::parApply(cl,input$X, seq(Dim), function(x, ytil) {
-  #   return(lm(ytil ~ -1 + x)$coefficients)
-  # }, ytil = ytil)
-  # parallel::stopCluster(cl)
-  # beta_new <- sapply(seq(Dim), function(d) {
-  #   # SVD_Bd <- svd(kFold(B_init,d), nu = ranks[d], nv = ranks[d])
-  #   b_d <- svd(kFold(B_init,d), nu = ranks[d], nv = ranks[d])$u
-  #   return(b_d)
-  # }, simplify = F)
-  # vec_B_new <- Reduce(`%x%`,beta_new)
-  # vec_XB <- crossprod(vec_B_new,apply(input$X, Dim + 1, identity))
-  # G_init <- lm(ytil ~ -1 + t(vec_XB))$coefficients
-  # G_new <- array(G_init, dim = ranks)
-  # # > Initial G is 1 ----
-  # G_new <- sapply(ranks, function(r) seq(r), simplify = F) |>
-  #   expand.grid() |>
-  #   apply(1,function(x) length(unique(x)) == 1) |>
-  #   as.numeric() |>
-  #   array(dim = ranks)
-  # > Random initial ----
   beta_new <- mapply(function(p_j,r_j) {
     out <- matrix(rnorm(p_j*r_j,sd = 0.025),p_j,r_j)
     out[seq(r_j),] <- 1
     return(out)
   },p_j = head(dim(input$X),-1),r_j = ranks,SIMPLIFY = FALSE)
   G_new <- array(rnorm(prod(ranks)),dim = ranks)
-  G_old <- G_new
-  beta_old <- beta_new
-  gam_old <- gam_new
-  step_B <- composeTuckerCore(beta_new, G_new)
-  new_llik <- ftr_log_likelihood(input,c(step_B),gam_new)
-  # new_llik <- llik + llik*epsilon
+  new_llik <- ftr_log_likelihood(input,compose_tucker_ftr_vec(beta_new,G_new),gam_new)
   step <- 1
-  while((100*(abs(new_llik - llik))/abs(llik) > epsilon) & (step <= max.iter)) {
-    cat("Step",step,"Log-likelihood",new_llik," % change:",100*(abs(new_llik - llik))/llik,"\n")
+  while(100*abs(new_llik - llik)/abs(llik) > epsilon & step < step_limit) {
+    cat("Step",step,"Log-likelihood",new_llik,"\n")
     G_old <- G_new
     beta_old <- beta_new
     gam_old <- gam_new
@@ -88,30 +64,15 @@ FTRTucker <- function(input,ranks = NULL,epsilon = 1e-1,betas_LASSO = TRUE,num_t
     llik <- new_llik
     step_y <- input$y - c(tcrossprod(gam_new,input$eta))
     for(d in seq(Dim)) {
-      # step_X <- t(apply(input$X,length(dim(input$X)),function(X_i){
-      #   X_id <- t(apply(X_i,d,identity))
-      #   XB_not_d <- X_id %*% Reduce(`%x%`,rev(beta_new[-d])) %*% apply(G_new,d,identity)
-      #   return(XB_not_d)
-      # }))
-      # step_X <- kFold(input$X,c(d,length(dim(input$X))))
-      step_X <- kFold(input$X,d)
-      # step_B <- Reduce(`%x%`,rev(beta_new[-d])) %*% apply(G_new,d,identity)
-      step_B <- Reduce(`%x%`,rev(beta_new[-d])) %*% t(kFold(G_new,d))
-      # cat("d =",d,"min(B) =",min(c(step_B)),"max(B) =",max(c(step_B)),"\n")
-      if(abs(min(c(step_B))) < .Machine$double.eps &
-         abs(max(c(step_B))) < .Machine$double.eps) {
-        message("Tensor coefficient computationally zero.")
-        # beta_old[[d]] <- matrix(0,nrow = dim(input$X)[d], ncol = ranks[d])
-        # return(list(gam = gam_old,B = array(compose_tucker_ftr_vec(beta_old,G_old),
-        #                                     dim = head(dim(input$X),-1)),
-        #             betas = beta_old, G = G_old, llik = llik,
-        #             total_time = proc.time()[3] - start_time))
-      }
-      step_XB <- crossprod(step_X, step_B)
-      step_X <- matrix(step_XB, nrow = sample_size, byrow = T)
-      # step_X <- kFold(input$X,c(d,length(dim(input$X)))) %*%
-      #   Reduce(`%x%`,rev(beta_new[-d])) %*% apply(G_new,d,identity) |>
-      #   matrix(nrow = tail(dim(input$X),1), byrow = T)
+      step_X_old <- t(apply(input$X,length(dim(input$X)),function(X_i){
+        X_id <- t(apply(X_i,d,identity))
+        XB_not_d <- X_id %*% Reduce(`%x%`,rev(beta_new[-d])) %*% apply(G_new,d,identity)
+        return(XB_not_d)
+      }))
+      step_B <- Reduce(`%x%`,rev(beta_new[-d])) %*% apply(G_new,d,identity)
+      step_X <- kFold(input$X,d) #%*%
+
+        matrix(nrow = sample_size, byrow = T)
       if(betas_LASSO){
         cv.beta_new <- try(glmnet::cv.glmnet(step_X,step_y,type.measure = "mse",alpha = 1,
                                  family = "gaussian",intercept = FALSE))
@@ -131,29 +92,30 @@ FTRTucker <- function(input,ranks = NULL,epsilon = 1e-1,betas_LASSO = TRUE,num_t
       beta_new[[d]][seq(ranks[d]),] <- 1
     }
     # step_X <- t(apply(input$X,length(dim(input$X)),function(X_i) t(Reduce(`%x%`,rev(beta_new)))%*%c(X_i)))
-    step_X <- kFold(input$X, Dim + 1) %*% Reduce(`%x%`,rev(beta_new))
+    step_X <- kFold(input$X, length(dim(input$X))) %*% Reduce(`%x%`,rev(beta_new))
     if(nrow(step_X) == 1) step_X <- t(step_X)
     if(length(G_new) < 2){
       G_new <- array(lm(step_y ~ -1 + step_X)$coefficients,dim = ranks)
     }else{
-      cv.G_new <- try(glmnet::cv.glmnet(step_X,step_y,type.measure = "mse",alpha = 1,
-                            family = "gaussian",intercept = FALSE))
-      if(class(cv.G_new) == "cv.glmnet") {
+      if(G_LASSO){
+        cv.G_new <- try(glmnet::cv.glmnet(step_X,step_y,type.measure = "mse",alpha = 1,
+                                          family = "gaussian",intercept = FALSE))
+        if(class(cv.G_new) == "cv.glmnet") {
           G_new <- array(c(as.matrix(coef(cv.G_new,s = "lambda.min"))[-1,]),
-                     dim = ranks)
+                         dim = ranks)
+        }else{
+          G_new <- array(c(lm(step_y ~ -1 + step_X)$coefficients), dim = ranks)
+        }
       }else{
         G_new <- array(c(lm(step_y ~ -1 + step_X)$coefficients), dim = ranks)
       }
     }
-    step_B <- composeTuckerCore(beta_new,G_new)
-    BX <- c(kFold(input$X,length(dim(input$X))) %*% c(step_B))
+    BX <- c(kFold(input$X,length(dim(input$X))) %*% compose_tucker_ftr_vec(beta_new,G_new))
     gam_new <- lm(input$y - BX ~ -1 + input$eta)$coefficients
     new_llik <- ftr_log_likelihood(input,compose_tucker_ftr_vec(beta_new,G_new),gam_new)
   }
-  convergence <- step < max.iter
   return(list(gam = gam_old,B = array(compose_tucker_ftr_vec(beta_old,G_old),
                                       dim = head(dim(input$X),-1)),
               betas = beta_old, G = G_old, llik = llik,
-              convergence = convergence,
               total_time = proc.time()[3] - start_time))
 }
