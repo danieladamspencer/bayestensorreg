@@ -12,7 +12,7 @@
 #' @param betas_LASSO (logical) Should the LASSO be applied to the betas in the
 #'   Tucker tensor decomposition? Defaults to \code{FALSE}.
 #' @param G_LASSO (logical) Should the LASSO be applied to the core tensor in the
-#'   Tucker tensor decomposition? Defaults to \code{FALSE}.
+#'   Tucker tensor decomposition? Defaults to \code{TRUE}.
 #' @param step_limit The maximum number of steps that can be taken before
 #'   deciding that the algorithm did not converge
 #'
@@ -36,7 +36,7 @@ FTRTucker <-
     ranks = NULL,
     epsilon = 1e-4,
     betas_LASSO = FALSE,
-    G_LASSO = FALSE,
+    G_LASSO = TRUE,
     step_limit = 1000
     ) {
   start_time <- proc.time()[3]
