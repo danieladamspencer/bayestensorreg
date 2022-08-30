@@ -64,15 +64,14 @@ FTRTucker <-
     llik <- new_llik
     step_y <- input$y - c(tcrossprod(gam_new,input$eta))
     for(d in seq(Dim)) {
-      step_X_old <- t(apply(input$X,length(dim(input$X)),function(X_i){
-        X_id <- t(apply(X_i,d,identity))
-        XB_not_d <- X_id %*% Reduce(`%x%`,rev(beta_new[-d])) %*% apply(G_new,d,identity)
-        return(XB_not_d)
-      }))
-      step_B <- Reduce(`%x%`,rev(beta_new[-d])) %*% apply(G_new,d,identity)
-      step_X <- kFold(input$X,d) #%*%
-
-        matrix(nrow = sample_size, byrow = T)
+      # step_X_old <- t(apply(input$X,length(dim(input$X)),function(X_i){
+      #   X_id <- t(apply(X_i,d,identity))
+      #   XB_not_d <- X_id %*% Reduce(`%x%`,rev(beta_new[-d])) %*% apply(G_new,d,identity)
+      #   return(XB_not_d)
+      # }))
+      step_B <- tcrossprod(Reduce(`%x%`,rev(beta_new[-d])),kFold(G_new,d))
+      step_X <- kFold(input$X,c(Dim+1,d)) %*% step_B |>
+        matrix(nrow = sample_size, byrow = F)
       if(betas_LASSO){
         cv.beta_new <- try(glmnet::cv.glmnet(step_X,step_y,type.measure = "mse",alpha = 1,
                                  family = "gaussian",intercept = FALSE))
@@ -92,7 +91,7 @@ FTRTucker <-
       beta_new[[d]][seq(ranks[d]),] <- 1
     }
     # step_X <- t(apply(input$X,length(dim(input$X)),function(X_i) t(Reduce(`%x%`,rev(beta_new)))%*%c(X_i)))
-    step_X <- kFold(input$X, length(dim(input$X))) %*% Reduce(`%x%`,rev(beta_new))
+    step_X <- kFold(input$X, Dim + 1) %*% Reduce(`%x%`,rev(beta_new))
     if(nrow(step_X) == 1) step_X <- t(step_X)
     if(length(G_new) < 2){
       G_new <- array(lm(step_y ~ -1 + step_X)$coefficients,dim = ranks)
@@ -110,7 +109,7 @@ FTRTucker <-
         G_new <- array(c(lm(step_y ~ -1 + step_X)$coefficients), dim = ranks)
       }
     }
-    BX <- c(kFold(input$X,length(dim(input$X))) %*% compose_tucker_ftr_vec(beta_new,G_new))
+    BX <- c(kFold(input$X,Dim + 1) %*% compose_tucker_ftr_vec(beta_new,G_new))
     gam_new <- lm(input$y - BX ~ -1 + input$eta)$coefficients
     new_llik <- ftr_log_likelihood(input,compose_tucker_ftr_vec(beta_new,G_new),gam_new)
   }

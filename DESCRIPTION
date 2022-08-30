@@ -35,6 +35,3 @@ Suggests:
     DensParcorr,
     rmarkdown
 VignetteBuilder: knitr
-LinkingTo: 
-    RcppGSL,
-    Rcpp
