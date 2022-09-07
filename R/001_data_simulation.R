@@ -27,16 +27,21 @@ TR_simulated_data <-
            CNR = 1,
            num_active = 3,
            other_covar = c(1, 1)) {
-    B <- Reduce(`+`, sapply(seq(num_active), function(zz) {
-      neuRosim::specifyregion(
-        dim = tensor_dims,
-        coord = sapply(tensor_dims, function(z)
-          sample(seq(z), size = 1)),
-        radius = ceiling(min(tensor_dims) * runif(1, 0.02, 0.1)),
-        form = "sphere",
-        fading = runif(1, 0.5, 1)
-      )
-    }, simplify = FALSE))
+    if(num_active == 0){
+      B <- array(0, dim = tensor_dims)
+    }
+    if(num_active > 0) {
+      B <- Reduce(`+`, sapply(seq(num_active), function(zz) {
+        neuRosim::specifyregion(
+          dim = tensor_dims,
+          coord = sapply(tensor_dims, function(z)
+            sample(seq(z), size = 1)),
+          radius = ceiling(min(tensor_dims) * runif(1, 0.02, 0.1)),
+          form = "sphere",
+          fading = runif(1, 0.5, 1)
+        )
+      }, simplify = FALSE))
+    }
     eta <-
       matrix(rnorm(subjects * length(other_covar)), subjects, length(other_covar))
     gam <- other_covar

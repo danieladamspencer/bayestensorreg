@@ -74,24 +74,24 @@ BTR_CP <- function(input,max_rank = 1,n_iter = 100, n_burn = 0,hyperparameters =
     )
 
   # Set initials ----
-  # betas <- sapply(seq(D),function(j){
-  #   matrix(rnorm(p[j]*max_rank,sd = 0.025),p[j],max_rank)
-  # },simplify = FALSE)
+  betas <- sapply(seq(D),function(j){
+    matrix(rnorm(p[j]*max_rank,sd = 0.025),p[j],max_rank)
+  },simplify = FALSE)
   gam <- lm(input$y ~ -1 + input$eta)$coefficients
   if(any(is.na(gam))) gam <- 0
-  ytil <- c(input$y - input$eta %*% gam)
-  avail_threads <- parallel::detectCores() - 1
-  if(is.null(num_threads)) num_threads <- avail_threads
-  num_threads <- min(num_threads, avail_threads)
-  cl <- parallel::makeCluster(num_threads)
-  B_init <- parallel::parApply(cl,input$X, seq(D), function(x, ytil) {
-    return(lm(ytil ~ -1 + x)$coefficients)
-  }, ytil = ytil)
-  parallel::stopCluster(cl)
-  betas <- sapply(seq(D), function(d) {
-    b_d <- svd(kFold(B_init,d), nu = max_rank, nv = max_rank)$u
-    return(b_d)
-  }, simplify = F)
+  # ytil <- c(input$y - input$eta %*% gam)
+  # avail_threads <- parallel::detectCores() - 1
+  # if(is.null(num_threads)) num_threads <- avail_threads
+  # num_threads <- min(num_threads, avail_threads)
+  # cl <- parallel::makeCluster(num_threads)
+  # B_init <- parallel::parApply(cl,input$X, seq(D), function(x, ytil) {
+  #   return(lm(ytil ~ -1 + x)$coefficients)
+  # }, ytil = ytil)
+  # parallel::stopCluster(cl)
+  # betas <- sapply(seq(D), function(d) {
+  #   b_d <- svd(kFold(B_init,d), nu = max_rank, nv = max_rank)$u
+  #   return(b_d)
+  # }, simplify = F)
   lam <- sapply(seq(D),function(d) rep(1,max_rank), simplify = FALSE)
   tau <- 1
   sig_y2 <- 1

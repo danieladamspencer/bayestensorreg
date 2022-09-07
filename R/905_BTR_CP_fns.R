@@ -180,8 +180,9 @@ cp_draw_betas <- function(X,betas,sig_y2,y,gam,eta,W,Phi,tau,j,r) {
   #   betas[[l]][,r]
   # },simplify = FALSE)
   betas_l_r <- sapply(betas[-j], function(x) x[,r], simplify = F)
-  B_not_j_r <- c(Reduce(`%o%`,betas_l_r))
-  H_jr <- (kFold(X,c(length(dim(X)),j)) %*% c(B_not_j_r)) |>
+  # B_not_j_r <- c(Reduce(`%o%`,betas_l_r))
+  B_not_j_r <- Reduce(`%x%`,betas_l_r)
+  H_jr <- (kFold(X,c(length(dim(X)),j)) %*% B_not_j_r) |>
     c() |> matrix(nrow = tail(dim(X),1))
   # H_jr <- t(apply(X,length(dim(X)),function(X_i){
   #   crossprod(apply(X_i,j,identity), c(B_not_j_r))
