@@ -11,7 +11,7 @@ melt_mat(x)
 }
 \value{
 A data frame with the number of rows equal to the number of elements
-  in \code{x}.
+in \code{x}.
 }
 \description{
 This is meant to be a lightweight replacement for \code{reshape2::melt} that

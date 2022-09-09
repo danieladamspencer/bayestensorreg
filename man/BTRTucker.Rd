@@ -30,7 +30,7 @@ burn-in}
 \item{hyperparameters}{a list with the (scalar) elements \code{a.tau},
 \code{b.tau}, \code{a.lam}, \code{b.lam}, \code{nu}, \code{s_02},
 \code{a.sig}, \code{b.sig}, \code{Sig_0}, \code{mu_gam}, \code{alpha.grid},
- \code{a.u}, \code{b.u}, \code{a.z}, and/or \code{b.z},
+\code{a.u}, \code{b.u}, \code{a.z}, and/or \code{b.z},
 defining the values of the hyperparameters within the
 model. If \code{NULL}, then default values will be used. It is also
 possible to specify only a subset of the hyperparameters. The

@@ -19,8 +19,8 @@ An array of dimension \eqn{D + 1}.
 }
 \description{
 This is a wrapper function to perform the sequential 2-means variable
-  selection method [@li2017variable] on the reconstructed tensor from the
-  posterior draws of betas.
+selection method \link{@li2017variable} on the reconstructed tensor from the
+posterior draws of betas.
 }
 \examples{
 # In this case, the value for D is 2

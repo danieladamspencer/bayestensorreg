@@ -40,7 +40,7 @@ partial correlations}
 }
 \value{
 A list with class \code{TRR_GGM_data} with elements \code{Y},
-  \code{x}, \code{true_d}, \code{true_B}, and \code{true_d_covar}
+\code{x}, \code{true_d}, \code{true_B}, and \code{true_d_covar}
 }
 \description{
 Simulated data for tensor response regression with Gaussian graphical model

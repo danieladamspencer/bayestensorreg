@@ -15,8 +15,8 @@ An array estimate of the tensor coefficient
 }
 \description{
 This is a helper function that combines \code{BTRT_all_B},
-  \code{BTRT_estimate_B}, \code{composeTuckerCore}, \code{s2m_B}, and
-  \code{s2m}.
+\code{BTRT_estimate_B}, \code{composeTuckerCore}, \code{s2m_B}, and
+\code{s2m}.
 }
 \examples{
 \dontrun{

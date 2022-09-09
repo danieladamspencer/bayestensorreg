@@ -15,8 +15,8 @@ An array as a final estimate of the tensor coefficient
 }
 \description{
 This uses the sequential 2-means post-hoc variable-selection technique from
-  Li and Pati (2018) to produce a point estimate of the tensor coefficient
-  from all of posterior samples of the tensor coefficient.
+Li and Pati (2018) to produce a point estimate of the tensor coefficient
+from all of posterior samples of the tensor coefficient.
 }
 \examples{
 \dontrun{

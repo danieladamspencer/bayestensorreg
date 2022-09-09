@@ -21,7 +21,7 @@ BTRR_GGM_draw_Phi(BtWB_g, Xi_g, accept_g, cov_Metro_g, p_g, tau_g, alpha_g)
 }
 \value{
 List with a Phi update,  the acceptance number update, and the Xi
-  update
+update
 }
 \description{
 Draw Phi_g under the stick-breaking prior

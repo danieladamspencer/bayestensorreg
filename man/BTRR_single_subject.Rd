@@ -51,7 +51,7 @@ A list with the posterior samples
 }
 \description{
 Performs the MCMC to draw from the posterior distribution for the model
-  published by Guhaniyogi and Spencer (2020).
+published by Guhaniyogi and Spencer (2020).
 }
 \examples{
 \dontrun{

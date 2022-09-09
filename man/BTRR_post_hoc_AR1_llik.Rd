@@ -15,10 +15,10 @@ from the posterior distribution from \code{\link{BTRR_single_subject}}.}
 }
 \value{
 A vector with length equal to the number of samples from the
-  posterior distribution containing the log-likelihood values for each sample.
+posterior distribution containing the log-likelihood values for each sample.
 }
 \description{
 Calculate the log-likelihood for the Bayesian tensor response regression
-  model. This can be useful when performing diagnostics. This is excluded
-  from the Markov Chain function for performance gains.
+model. This can be useful when performing diagnostics. This is excluded
+from the Markov Chain function for performance gains.
 }

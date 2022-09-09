@@ -16,6 +16,6 @@ The DIC approximation value (a scalar)
 }
 \description{
 Calculate the Deviance Information Criterion (DIC) through an approximation
-  based solely on the values of the log-likelihood at each iteration of the
-  Markov Chain Monte Carlo results.
+based solely on the values of the log-likelihood at each iteration of the
+Markov Chain Monte Carlo results.
 }

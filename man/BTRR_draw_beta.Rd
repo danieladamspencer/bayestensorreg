@@ -27,11 +27,11 @@ and the covariance structure.}
 }
 \value{
 A list of length \eqn{D} made up of matrices with dimensions
-  \eqn{p_j} by \eqn{R}.
+\eqn{p_j} by \eqn{R}.
 }
 \description{
 Draw beta variables from their posterior full conditional distributions. As a
-  note, this is done with a loop in the code for the Markov Chain Monte
-  Carlo.
+note, this is done with a loop in the code for the Markov Chain Monte
+Carlo.
 }
 \keyword{internal}

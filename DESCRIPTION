@@ -2,10 +2,17 @@ Package: bayestensorreg
 Type: Package
 Title: Bayesian Tensor Regression
 Version: 0.1.2
-Author: Dan Spencer
+Authors@R: c(
+    person(given = "Daniel",
+           family = "Spencer",
+           email = "danieladamspencer@gmail.com",
+           role = c("aut", "cre"),
+           comment = c(ORCiD = "0000-0002-9705-3605")
+           )
+    )
 Maintainer: Dan Spencer <danieladamspencer@gmail.com>
-Description: This is a package with functions to perform Bayesian tensor 
-  regression using tensor decomposition, as covered in my dissertation.
+Description: This is a package with functions to perform various Bayesian tensor 
+  regression methods using tensor decompositions, as covered in my dissertation.
 License: LGPL-3
 Depends:
     R (>= 4.1.0), 
@@ -34,4 +41,7 @@ Suggests:
     knitr,
     DensParcorr,
     rmarkdown
+Roxygen: list(markdown = TRUE)
 VignetteBuilder: knitr
+URL: https://github.com/danieladamspencer/bayestensorreg
+BugReports: https://github.com/danieladamspencer/bayestensorreg/issues

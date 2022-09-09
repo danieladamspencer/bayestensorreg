@@ -11,7 +11,7 @@ composeParafac(bb)
 }
 \value{
 A single array-class tensor. In two-dimensions, this will be returned
-  as a matrix.
+as a matrix.
 }
 \description{
 This function takes a list of length D containing all of

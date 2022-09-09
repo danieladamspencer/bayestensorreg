@@ -11,10 +11,10 @@ BTRR_GGM_extract_B(btrr_ggm_result)
 }
 \value{
 An array in which the last index corresponds to the \eqn{i}th draw
-  from the posterior distribution.
+from the posterior distribution.
 }
 \description{
 As the \code{BTRR_single_subject} function saves posterior samples of the
-  tensor decomposition components, the tensor coefficient is composed from
-  results of class \code{BTRR_GGM_result}.
+tensor decomposition components, the tensor coefficient is composed from
+results of class \code{BTRR_GGM_result}.
 }

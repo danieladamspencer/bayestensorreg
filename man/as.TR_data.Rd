@@ -15,7 +15,7 @@ as.TR_data(y, X, eta = NULL)
 }
 \value{
 a list of class 'TR_data' in which dimensions have been verified as
-  compatible with the tensor regression functions
+compatible with the tensor regression functions
 }
 \description{
 Format tensor regression data

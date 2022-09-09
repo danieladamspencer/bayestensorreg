@@ -36,8 +36,8 @@ A tile plot done in base R graphics
 }
 \description{
 This function has no dependencies outside of base R, but provides a
-  reasonable approximation to the functionality of
-  \code{ggplot2::geom_raster}.
+reasonable approximation to the functionality of
+\code{ggplot2::geom_raster}.
 }
 \examples{
 x <- matrix(rnorm(50*50),50,50)

@@ -37,9 +37,9 @@ deciding that the algorithm did not converge}
 }
 \value{
 A list with elements \code{gam} (vector coefficient result),
-  \code{betas} (tensor decomposition components), \code{G} (the core tensor in the tensor decomposition),
-  \code{B} (the tensor coefficient), \code{llik} (the value of the
-  log-likelihood) and \code{total_time} (time spent to complete the analysis).
+\code{betas} (tensor decomposition components), \code{G} (the core tensor in the tensor decomposition),
+\code{B} (the tensor coefficient), \code{llik} (the value of the
+log-likelihood) and \code{total_time} (time spent to complete the analysis).
 }
 \description{
 Frequentist tensor regression with the Tucker decomposition

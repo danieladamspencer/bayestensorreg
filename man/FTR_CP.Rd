@@ -23,8 +23,8 @@ algorithm}
 }
 \value{
 A list with elements \code{gam} (vector coefficient result),
-  \code{betas} (tensor decomposition components), \code{B} (the tensor ,
-  coefficient), and \code{total_time} (time spent to complete the analysis).
+\code{betas} (tensor decomposition components), \code{B} (the tensor ,
+coefficient), and \code{total_time} (time spent to complete the analysis).
 }
 \description{
 Frequentist Tensor Regression with the CP decomposition

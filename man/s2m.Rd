@@ -15,7 +15,7 @@ considered equal}
 }
 \value{
 A scalar representing the number of nonzero-valued parameters in a
-  particular draw from a posterior distribution
+particular draw from a posterior distribution
 }
 \description{
 Sequential 2-means number of nonzero-values parameters for an iteration

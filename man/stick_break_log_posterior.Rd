@@ -21,7 +21,7 @@ stick_break_log_posterior(Xi_g, current_rank, BtWB_g, p_g, tau_g, alpha_g)
 }
 \value{
 The value for the log of the posterior density under the stick
-  breaking prior
+breaking prior
 }
 \description{
 Get the log posterior under the stick-breaking prior for BTRR_GGM

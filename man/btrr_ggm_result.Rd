@@ -12,6 +12,6 @@ data(btrr_ggm_result)
 }
 \description{
 This is a \code{BTRR_GMM_result} object from running the BTRR_GGM function on
-  the simulated data created in the vignette.
+the simulated data created in the vignette.
 }
 \keyword{datasets}

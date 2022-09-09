@@ -30,10 +30,10 @@ that will be used to generate non-tensor-valued covariates}
 }
 \value{
 An object of class \code{TR_data} that contains the
-  elements \code{y} (a vector of response values), \code{X} (an array of
-  covariate values), \code{eta} (a matrix of nuisance covariates),
-  \code{true_B} (an array with the true tensor coefficient values), and
-  \code{gam} (a vector with the true nuisance coefficient values)
+elements \code{y} (a vector of response values), \code{X} (an array of
+covariate values), \code{eta} (a matrix of nuisance covariates),
+\code{true_B} (an array with the true tensor coefficient values), and
+\code{gam} (a vector with the true nuisance coefficient values)
 }
 \description{
 Simulated tensor regression data

@@ -11,11 +11,11 @@ BTRT_all_B(btrt_object)
 }
 \value{
 An array of samples from the posterior distribution of the tensor
-  coefficient. The last dimension corresponds to the draw number
+coefficient. The last dimension corresponds to the draw number
 }
 \description{
 Uses the tensor decomposition from Tucker (1927) to compose a tensor
-  coefficient draw from a \code{BTRT_result} object.
+coefficient draw from a \code{BTRT_result} object.
 }
 \examples{
 \dontrun{

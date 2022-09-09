@@ -59,7 +59,7 @@ A list object with the posterior draws from the MCMC chain.
 }
 \description{
 Performs the MCMC to draw from the posterior distribution for the model
-  published by Spencer, Guhaniyogi, and Prado (2020).
+published by Spencer, Guhaniyogi, and Prado (2020).
 }
 \examples{
 \dontrun{
