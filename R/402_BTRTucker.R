@@ -122,7 +122,6 @@ BTRTucker <-
     #   )
     # G <- array(rnorm(prod(ranks), sd = 1), dim = ranks)
     V <- array(1, dim = ranks)
-    z <- 1
     U <- array(1, dim = ranks)
     W <- mapply(
       function(ps, r)
@@ -132,7 +131,6 @@ BTRTucker <-
       SIMPLIFY = FALSE
     )
     lam <- sapply(ranks, rep, x = 1, simplify = FALSE)
-    tau <- 1
     gam <- lm(input$y ~ -1 + input$eta)$coefficients
     gam <- ifelse(is.na(gam), 0, gam)
     y_til <- input$y - c(tcrossprod(t(gam), input$eta))
@@ -148,16 +146,18 @@ BTRTucker <-
       b_d <- svd(kFold(B_init,d), nu = ranks[d], nv = ranks[d])$u
       return(b_d)
     }, simplify = F)
+    tau <- var(unlist(betas))
     vec_B_new <- Reduce(`%x%`,betas)
     vec_XB <- crossprod(vec_B_new,apply(input$X, Dim + 1, identity))
     G_init <- lm(y_til ~ -1 + t(vec_XB))$coefficients
     G <- array(G_init, dim = ranks)
+    z <- var(unlist(G))
     # G <- sapply(ranks, function(r) seq(r), simplify = F) |>
     #   expand.grid() |>
     #   apply(1,function(x) length(unique(x)) == 1) |>
     #   as.numeric() |>
     #   array(dim = ranks)
-    sig_y2 <- var(input$y)
+    sig_y2 <- var(y_til)
     # Begin MCMC
     start_MCMC <- proc.time()[3]
     for (s in seq(n_iter)) {
