@@ -88,14 +88,14 @@ Next, extracting the tensor samples from the posterior distribution can be done 
 all_B <- BTRR_GGM_extract_B(btrr_ggm_result)
 mean_B <- sapply(all_B, function(b) apply(b,1:2,mean), simplify = F)
 names(mean_B) <- paste("Region", 1:5)
-mean_df <- reshape2::melt(mean_B)
+mean_df <- melt_list(mean_B)
 mean_df$Quantity <- "Posterior Mean"
 s2m_B <- sapply(all_B, s2m_B, simplify = F)
 names(s2m_B) <- paste("Region",1:5)
-s2m_df <- reshape2::melt(s2m_B)
+s2m_df <- melt_list(s2m_B)
 s2m_df$Quantity <- "Seq. 2-means"
 names(input$true_B) <- paste("Region", 1:5)
-true_df <- reshape2::melt(input$true_B)
+true_df <- melt_list(input$true_B)
 true_df$Quantity <- "True Value"
 compare_df <- rbind(mean_df,s2m_df,true_df)
 library(ggplot2)
@@ -111,11 +111,11 @@ The connectivity results, shown through partial correlations can be found using 
 ```{r plot connectivity results, fig.width=5}
 Sig_median <- apply(btrr_ggm_result$Sig,1:2,median)
 median_parcor <- DensParcorr::prec2part(Sig_median)
-median_df <- reshape2::melt(median_parcor)
+median_df <- melt_array(median_parcor)
 median_df <- median_df[median_df$Var1 > median_df$Var2,]
 median_df$Quantity <- "Posterior Median"
 true_parcor <- DensParcorr::prec2part(solve(input$true_d_covar))
-true_parcor <- reshape2::melt(true_parcor)
+true_parcor <- melt_array(true_parcor)
 true_parcor <- true_parcor[true_parcor$Var1 > true_parcor$Var2,]
 true_parcor$Quantity <- "True Value"
 parcor_df <- rbind(median_df,true_parcor)

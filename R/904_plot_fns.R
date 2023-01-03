@@ -25,7 +25,6 @@ ggplot_ts <- function(x, title = NULL) {
 #'   which will be used to separate the density plots for voxels with true zero
 #'   values and true nonzero plots.
 #'
-#' @importFrom reshape2 melt
 #' @importFrom tidyr unite
 #' @import ggplot2
 #'
@@ -34,9 +33,11 @@ ggplot_ts <- function(x, title = NULL) {
 B_densities <- function(B, truth = NULL) {
   voxel <- value <- NULL
   D <- length(dim(B)) - 1
+  coef_df <- melt_array(B)
+  names(coef_df) <- c(paste0("Var", seq(D)), "iter","value")
   if (is.null(truth)) {
-    coef_df <-
-      reshape2::melt(B, varnames = c(paste0("Var", seq(D)), "iter"))
+    # coef_df <-
+      # reshape2::melt(B, varnames = c(paste0("Var", seq(D)), "iter"))
     voxelwise_df <-
       tidyr::unite(coef_df, voxel, grep("Var", names(coef_df), value = TRUE))
     out <- ggplot2::ggplot(voxelwise_df) +
@@ -46,10 +47,11 @@ B_densities <- function(B, truth = NULL) {
   } else {
     if (!identical(dim(truth), head(dim(B), -1)))
       stop("The dimensions of truth should match all but the last dimensions of B.")
-    coef_df <-
-      reshape2::melt(B, varnames = c(paste0("Var", seq(D)), "iter"))
-    truth_df <-
-      reshape2::melt(truth, value.name = "Truth")
+    # coef_df <-
+    #   reshape2::melt(B, varnames = c(paste0("Var", seq(D)), "iter"))
+    # truth_df <-
+    #   reshape2::melt(truth, value.name = "Truth")
+    truth_df <- melt_array(truth, value.name = "Truth")
     truth_df$Truth <-
       factor(truth_df$Truth != 0, labels = paste("True", c("Zero", "Nonzero")))
     coef_truth_df <- merge(coef_df, truth_df)
@@ -70,7 +72,6 @@ B_densities <- function(B, truth = NULL) {
 #' @param x a matrix
 #' @param title the plot title
 #'
-#' @importFrom reshape2 melt
 #' @import ggplot2
 #'
 #' @return a ggplot grob
@@ -78,7 +79,8 @@ B_densities <- function(B, truth = NULL) {
 gg_tile_plot <- function(x,title = NULL) {
   if(!is.matrix(x)) stop("The input to this function should be a matrix.")
   Var1 <- Var2 <- value <- NULL
-  x_df <- reshape2::melt(x)
+  # x_df <- reshape2::melt(x)
+  x_df <- melt_array(x)
   out <- ggplot(x_df) +
     geom_raster(aes(x = Var1, y = Var2, fill = value)) +
     scale_color_gradient2("") +
@@ -89,22 +91,55 @@ gg_tile_plot <- function(x,title = NULL) {
   return(out)
 }
 
-#' Melt a matrix into a data frame with identifiers for row and column
+#' Melt and array into a data frame
 #'
-#' This is meant to be a lightweight replacement for \code{reshape2::melt} that
-#' will only work with matrices.
+#' This is a replacement for reshape2::melt, intended to reduce the number of
+#' package dependencies
 #'
-#' @param x A matrix
+#' @param x an array or matrix
+#' @param value.name an optional input for the column name containing data
 #'
-#' @return A data frame with the number of rows equal to the number of elements
-#'   in \code{x}.
+#' @return a data frame with the melted data
 #' @export
 #'
 #' @examples
-#' x <- matrix(rnorm(9),3,3)
-#' melt_mat(x)
-melt_mat <- function(x) {
-  out <- data.frame(row = c(row(x)), col = c(col(x)), value = c(x))
+#' A <- array(1:27, dim = c(3,3,3))
+#' melt_array(A)
+melt_array <- function(x, value.name = 'value') {
+  # Check class
+  if(!inherits(x,c('matrix','array'))) stop('Expecting a matrix or array.')
+  # Expand on dimension. This also allows for arbitrary dimension
+  out <-
+    expand.grid(
+      sapply(dim(x),seq,simplify = F)
+    )
+  # Add the numeric values to the data frame
+  out[[value.name]] <- c(x)
+  return(out)
+}
+
+#' Wrapper for melting arrays within lists
+#'
+#' @param x a list containing matrices or arrays
+#'
+#' @return a data frame with the melted data
+#' @export
+#'
+#' @examples
+#' A <- array(1:8, dim = c(2,2,2))
+#' B <- rep(list(A),2)
+#' melt_list(B)
+melt_list <- function(x) {
+  if(!inherits(x,'list')) stop("Expecting a list.")
+  # Grab names from the list
+  list_names <- names(x)
+  if(is.null(list_names)) list_names <- as.character(seq(length(x)))
+  out <- mapply(function(arrays,l_names) {
+    array_df <- melt_array(arrays)
+    array_df$L1 <- l_names
+    return(array_df)
+  }, arrays = x, l_names = list_names, SIMPLIFY = FALSE)
+  out <- Reduce(rbind,out)
   return(out)
 }
 
@@ -114,9 +149,9 @@ melt_mat <- function(x) {
 #'   reasonable approximation to the functionality of
 #'   \code{ggplot2::geom_raster}.
 #'
-#' @param tile_df A data frame with three columns: \code{row}, \code{col}, and
-#'   \code{value} describing locations within a matrix. See
-#'   \code{\link{melt_mat}} for an example.
+#' @param tile_df A matrix or a data frame with three columns:
+#'   \code{Var1}, \code{Var2}, and \code{value} describing locations within a
+#'   matrix. See \code{\link{melt_array}} for an example.
 #' @param col A color palette
 #' @param ncols The number of colors for a color palette, if \code{col} is not
 #'   provided.
@@ -133,12 +168,12 @@ melt_mat <- function(x) {
 #'
 #' @examples
 #' x <- matrix(rnorm(50*50),50,50)
-#' x_df <- melt_mat(x)
+#' x_df <- melt_array(x)
 #' tile.plot(x_df)
 tile.plot <- function(tile_df, col = NULL, ncols = NULL,
                       main = "", zlim = NULL, na.color  = "grey80") {
   .pardefault <- par()
-  if("matrix" %in% class(tile_df)) tile_df <- melt_mat(tile_df)
+  if(inherits(tile_df, "matrix")) tile_df <- melt_array(tile_df)
   if(!is.null(col) & !is.null(ncols)) {
     warning("Defining ncols based on col.")
     ncols <- length(col)
@@ -166,15 +201,15 @@ tile.plot <- function(tile_df, col = NULL, ncols = NULL,
     tile_cols[tile_df$value <= color_breaks[q]] <- col[q]
   }
   tile_cols[tile_cols == "0"] <- na.color
-  rows <- max(tile_df$row)
-  cols <- max(tile_df$col)
+  rows <- max(tile_df$Var1)
+  cols <- max(tile_df$Var2)
   cb_prime <- min(diff(color_breaks))
   par(mfrow = c(1,2), mar = c(1,1,2,1))
   layout(mat = matrix(c(1,2),nrow = 1, ncol = 2),widths = c(1.7,0.3))
   plot(c(0,rows), c(0,cols), type = 'n', xlab = "", ylab = "",
        xaxt = "n", yaxt = "n", main = main)
-  rect(xleft = tile_df$row - 1,ybottom = tile_df$col - 1,
-       xright = tile_df$row, ytop = tile_df$col, col = tile_cols,
+  rect(xleft = tile_df$Var1 - 1,ybottom = tile_df$Var2 - 1,
+       xright = tile_df$Var1, ytop = tile_df$Var2, col = tile_cols,
        border = NA)
   par(mar=c(1,1,2,4))
   plot(c(0,1),zlim, type = "n", xaxt = "n", yaxt = "n", xlab = "",

@@ -14,9 +14,9 @@ tile.plot(
 )
 }
 \arguments{
-\item{tile_df}{A data frame with three columns: \code{row}, \code{col}, and
-\code{value} describing locations within a matrix. See
-\code{\link{melt_mat}} for an example.}
+\item{tile_df}{A matrix or a data frame with three columns:
+\code{Var1}, \code{Var2}, and \code{value} describing locations within a
+matrix. See \code{\link{melt_array}} for an example.}
 
 \item{col}{A color palette}
 
@@ -41,6 +41,6 @@ reasonable approximation to the functionality of
 }
 \examples{
 x <- matrix(rnorm(50*50),50,50)
-x_df <- melt_mat(x)
+x_df <- melt_array(x)
 tile.plot(x_df)
 }
