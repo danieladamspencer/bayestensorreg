@@ -20,6 +20,7 @@
 #' @param save_dir (a character) A path to a directory in which the temporary
 #'   results will be saved. Defaults to the current working directory. If
 #'   \code{NULL}, no temporary saves are made.
+#' @param CP Should the model be reduced to the CP decomposition? Default: FALSE
 #'
 #' @return A list with the posterior samples
 #' @export
@@ -34,6 +35,7 @@ BTRTucker <-
            ranks = rep(1,length(dim(input$X)) - 1),
            n_iter = 100,
            n_burn = 0,
+           CP = FALSE,
            hyperparameters = NULL,
            save_dir = NULL) {
     # Logic checks for input
@@ -47,6 +49,8 @@ BTRTucker <-
     Dim <- length(dim(input$X)) - 1
     if (length(ranks) != Dim)
       stop("The length of ranks should be equal to the dimension of each subject's tensor covariate.")
+    if(CP & length(unique(ranks)) != 1)
+      stop("If CP is TRUE, then all ranks must be equal.")
     n <- length(input$y)
     p <- head(dim(input$X), -1)
 
@@ -112,15 +116,6 @@ BTRTucker <-
       )
 
     # Set initial conditions
-    # betas <-
-    #   mapply(
-    #     function(ps, r)
-    #       matrix(rnorm(ps * r, sd = 0.025 * r), ps, r),
-    #     ps = p,
-    #     r = ranks,
-    #     SIMPLIFY = FALSE
-    #   )
-    # G <- array(rnorm(prod(ranks), sd = 1), dim = ranks)
     V <- array(1, dim = ranks)
     U <- array(1, dim = ranks)
     W <- mapply(
@@ -136,11 +131,11 @@ BTRTucker <-
     y_til <- input$y - c(tcrossprod(t(gam), input$eta))
     avail_threads <- parallel::detectCores() - 1
     cl <- parallel::makeCluster(avail_threads)
-    B_init <- parallel::parApply(cl,input$X, seq(Dim), function(x) {
+    B_init <- parallel::parApply(cl,input$X, seq(Dim), function(x, y_til) {
       out <- lm(y_til ~ -1 + x)$coefficients
       if(is.na(out)) out <- 0 # This is for some cases where there are values outside a mask
       return(out)
-    })
+    }, y_til = y_til)
     parallel::stopCluster(cl)
     betas <- sapply(seq(Dim), function(d) {
       b_d <- svd(kFold(B_init,d), nu = ranks[d], nv = ranks[d])$u
@@ -149,14 +144,17 @@ BTRTucker <-
     tau <- var(unlist(betas))
     vec_B_new <- Reduce(`%x%`,betas)
     vec_XB <- crossprod(vec_B_new,apply(input$X, Dim + 1, identity))
-    G_init <- lm(y_til ~ -1 + t(vec_XB))$coefficients
-    G <- array(G_init, dim = ranks)
-    z <- var(unlist(G))
-    # G <- sapply(ranks, function(r) seq(r), simplify = F) |>
-    #   expand.grid() |>
-    #   apply(1,function(x) length(unique(x)) == 1) |>
-    #   as.numeric() |>
-    #   array(dim = ranks)
+    if(!CP) {
+      G_init <- lm(y_til ~ -1 + t(vec_XB))$coefficients
+      G <- array(G_init, dim = ranks)
+      z <- var(unlist(G))
+    }
+    if(CP) {
+      ranks_along <- sapply(ranks, seq, simplify = FALSE)
+      G <- Reduce(`%o%`, ranks_along)
+      G <- as.numeric((G^(1/Dim)) %% 1 == 0)
+      G <- array(G, dim = ranks)
+    }
     sig_y2 <- var(y_til)
     # Begin MCMC
     start_MCMC <- proc.time()[3]
@@ -179,7 +177,7 @@ BTRTucker <-
           )
       }
 
-      if (!all(ranks == 1)) {
+      if (!all(ranks == 1) | !CP) {
         z <- BTRT_draw_z(a.z, b.z, G, V)
         U <- BTRT_draw_U(a.u, b.u, G, z)
         V <- BTRT_draw_V(U, z, G)
@@ -206,25 +204,13 @@ BTRTucker <-
       # Draw gam
       if (!all(c(input$eta) == 0)) {
         y_til <- input$y - XB
-          # apply(input$X, length(dim(input$X)), function(X_i) {
-          #   crossprod(c(X_i), vecB)
-          # })
         gam <- BTRT_draw_gam(input$eta, Sig_0, mu_gam, y_til, sig_y2)
       }
       # Find llik
-      # llik <- sum(dnorm(
-      #   input$y,
-      #   sapply(asplit(input$X, length(dim(
-      #     input$X
-      #   ))),
-      #   function(bx)
-      #     crossprod(c(bx), vecB)) +
-      #     c(tcrossprod(gam, input$eta)),
-      #   sqrt(sig_y2),
-      #   log = TRUE
-      # ))
       llik <-
-        sum(dnorm(input$y, XB  + c(tcrossprod(gam, input$eta)), sqrt(sig_y2), log = T))
+        sum(dnorm(input$y,
+                  XB  + c(tcrossprod(gam, input$eta)),
+                  sqrt(sig_y2), log = TRUE))
       # Store the results
       results$betas[[s]] <- betas
       results$W[[s]] <- W
