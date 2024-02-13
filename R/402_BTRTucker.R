@@ -147,7 +147,6 @@ BTRTucker <-
     if(!CP) {
       G_init <- lm(y_til ~ -1 + t(vec_XB))$coefficients
       G <- array(G_init, dim = ranks)
-      z <- var(unlist(G))
     }
     if(CP) {
       ranks_along <- sapply(ranks, seq, simplify = FALSE)
@@ -155,6 +154,7 @@ BTRTucker <-
       G <- as.numeric((G^(1/Dim)) %% 1 == 0)
       G <- array(G, dim = ranks)
     }
+    z <- var(unlist(G))
     sig_y2 <- var(y_til)
     # Begin MCMC
     start_MCMC <- proc.time()[3]
