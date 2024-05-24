@@ -205,7 +205,7 @@ BTRT_draw_V <- function(U,z,G) {
 BTRT_draw_z <- function(a.z,b.z,G,V) {
   lambda_gig <- a.z - length(G)/2
   chi_gig <- sum(G^2 / V)
-  if(lamdba_gig < 0 & chi_gig == 0) chi_gig <- 0.0001
+  if(lambda_gig < 0 & chi_gig == 0) chi_gig <- 0.0001
   out <- GIGrvg::rgig(1, lambda_gig, chi_gig, 2*b.z)
   return(out)
 }
