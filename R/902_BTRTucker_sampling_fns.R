@@ -203,6 +203,9 @@ BTRT_draw_V <- function(U,z,G) {
 #' @return update to core tensor global variance
 #' @keywords internal
 BTRT_draw_z <- function(a.z,b.z,G,V) {
+  lambda_gig <- a.z - length(G)/2
+  lambda_chi <- sum(G^2 / V)
+  if(lamdba_gig < 0 & lambda_chi == 0) lambda_chi <- 0.0001
   out <- GIGrvg::rgig(1,a.z - length(G)/2,sum(G^2 / V), 2*b.z)
   return(out)
 }
