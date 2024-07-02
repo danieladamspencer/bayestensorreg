@@ -22,12 +22,17 @@
 #' @examples
 #' \dontrun{
 #' input <- TR_simulated_data()
-#' results <- FTR_CP(input$y, input$X, input$eta)
+#' results <- FTR_CP(input)
 #' }
-FTR_CP <- function(input,rank = 1,epsilon = 1e-8,max.iter = 1000) {
+FTR_CP <- function(input, rank = 1, epsilon = 1e-8, max.iter = 1000) {
   start_model <- proc.time()[3]
-  gam_new <- lm(input$y ~ -1 + input$eta)$coefficients
-  beta_new <- sapply(head(dim(input$X),-1),function(p_j) matrix(rnorm(p_j*rank,sd = 0.025),p_j,rank),simplify = FALSE)
+  if(!is.null(input$eta)) {
+    gam_new <- lm(input$y ~ -1 + input$eta)$coefficients
+  } else {
+    gam_new <- 0
+  }
+  tensor_P <- head(dim(input$X),-1)
+  beta_new <- sapply(tensor_P, function(p_j) matrix(rnorm(p_j*rank,sd = 0.025),p_j,rank),simplify = FALSE)
   llik <- ftr_log_likelihood(input,compose_parafac(beta_new),gam_new)
   new_llik <- llik #- llik*max(epsilon,1000)
   beta_old <- beta_new
@@ -39,8 +44,10 @@ FTR_CP <- function(input,rank = 1,epsilon = 1e-8,max.iter = 1000) {
     gam_old <- gam_new
     step <- step + 1
     llik <- new_llik
-    step_y <- input$y - c(tcrossprod(gam_new,input$eta))
-    for(d in seq(length(dim(input$X)) - 1)) {
+    if(!is.null(input$eta)) {
+      step_y <- input$y - c(tcrossprod(gam_new,input$eta))
+    } else {step_y <- input$y}
+    for(d in seq(length(tensor_P))) {
       # cat(d,"\n")
       step_X <- t(apply(input$X,length(dim(input$X)),function(X_i){
         X_id <- t(apply(X_i,d,identity))
@@ -60,12 +67,15 @@ FTR_CP <- function(input,rank = 1,epsilon = 1e-8,max.iter = 1000) {
       beta_new[[d]][is.na(beta_new[[d]])] <- 0 # In some cases with MRI data, all scan values are equal to zero.
     }
     B <- compose_parafac(beta_new)
-    gam_new <- lm(input$y - apply(input$X,length(dim(input$X)),function(x){
-      crossprod(c(x),c(B))
-    }) ~ -1 + input$eta)$coefficients
+    if(!is.null(input$eta)) {
+      gam_new <- lm(input$y - apply(input$X,length(dim(input$X)),function(x){
+        crossprod(c(x),c(B))
+      }) ~ -1 + input$eta)$coefficients
+    }
     new_llik <- ftr_log_likelihood(input,B,gam_new)
   }
   convergence <- step < max.iter
+  if(is.null(input$eta)) gam_old <- NULL
   return(
     list(
       gam = gam_old,

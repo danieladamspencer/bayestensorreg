@@ -39,8 +39,10 @@ Imports:
 Suggests: 
     knitr,
     DensParcorr,
-    rmarkdown
+    rmarkdown,
+    testthat (>= 3.0.0)
 Roxygen: list(markdown = TRUE)
 VignetteBuilder: knitr
 URL: https://github.com/danieladamspencer/bayestensorreg
 BugReports: https://github.com/danieladamspencer/bayestensorreg/issues
+Config/testthat/edition: 3

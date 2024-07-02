@@ -12,7 +12,9 @@
 #' @return scalar
 #' @keywords internal
 ftr_log_likelihood <- function(input,B,gam) {
-  gam_eta <- c(tcrossprod(gam,input$eta))
+  if(!is.null(input$eta)) {
+    gam_eta <- c(tcrossprod(gam,input$eta))
+  } else {gam_eta <- 0}
   XB <- apply(input$X,length(dim(input$X)),function(x){
     crossprod(c(x),c(B))
   })

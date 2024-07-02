@@ -9,7 +9,8 @@
 #'   the observational noise.
 #' @param num_active The number of contiguous nonzero activation regions
 #' @param other_covar A vector of true values for other (nuisance) coefficients
-#'   that will be used to generate non-tensor-valued covariates
+#'   that will be used to generate non-tensor-valued covariates. This can be set
+#'   to \code{NULL} if no other covariates are desired in the simulated data.
 #'
 #' @return An object of class \code{TR_data} that contains the
 #'   elements \code{y} (a vector of response values), \code{X} (an array of
@@ -42,14 +43,20 @@ TR_simulated_data <-
         )
       }, simplify = FALSE))
     }
-    eta <-
-      matrix(rnorm(subjects * length(other_covar)), subjects, length(other_covar))
-    gam <- other_covar
+    if(!is.null(other_covar)) {
+      eta <-
+        matrix(rnorm(subjects * length(other_covar)), subjects, length(other_covar))
+      gam <- other_covar
+      eta_gam <- c(eta %*% gam)
+    } else {
+      eta <- gam <- NULL
+      eta_gam <- 0
+    }
     X <-
       array(rnorm(prod(tensor_dims) * subjects), dim = c(tensor_dims, subjects))
     y <-
       apply(X, length(dim(X)), function(xx)
-        sum(xx * B * CNR)) + c(eta %*% gam) + rnorm(subjects)
+        sum(xx * B * CNR)) + eta_gam + rnorm(subjects)
     return(list(
       y = y,
       X = X,

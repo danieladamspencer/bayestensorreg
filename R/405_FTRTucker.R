@@ -43,10 +43,13 @@ FTRTucker <-
   Dim <- length(dim(input$X))-1
   sample_size <- length(input$y)
   if(is.null(ranks)) ranks <- rep(1,Dim)
-  gam_lm <- lm(input$y ~ -1 + input$eta)
-  llik <- c(logLik(gam_lm))
-  cat("Log-likelihood without tensor:",llik,"\n")
-  gam_new <- gam_lm$coefficients
+  if(!is.null(input$eta)) {
+    gam_lm <- lm(input$y ~ -1 + input$eta)
+    llik <- c(logLik(gam_lm))
+    cat("Log-likelihood without tensor:",llik,"\n")
+    gam_new <- gam_lm$coefficients
+  } else {gam_new <- NULL}
+
   beta_new <- mapply(function(p_j,r_j) {
     out <- matrix(rnorm(p_j*r_j,sd = 0.025),p_j,r_j)
     out[seq(r_j),] <- 1
@@ -62,7 +65,9 @@ FTRTucker <-
     gam_old <- gam_new
     step <- step + 1
     llik <- new_llik
-    step_y <- input$y - c(tcrossprod(gam_new,input$eta))
+    if(!is.null(input$eta)) {
+      step_y <- input$y - c(tcrossprod(gam_new,input$eta))
+    } else {step_y <- input$y}
     for(d in seq(Dim)) {
       # step_X_old <- t(apply(input$X,length(dim(input$X)),function(X_i){
       #   X_id <- t(apply(X_i,d,identity))
@@ -110,7 +115,9 @@ FTRTucker <-
       }
     }
     BX <- c(kFold(input$X,Dim + 1) %*% compose_tucker_ftr_vec(beta_new,G_new))
-    gam_new <- lm(input$y - BX ~ -1 + input$eta)$coefficients
+    if(!is.null(input$eta)) {
+      gam_new <- lm(input$y - BX ~ -1 + input$eta)$coefficients
+    }
     new_llik <- ftr_log_likelihood(input,compose_tucker_ftr_vec(beta_new,G_new),gam_new)
   }
   return(list(gam = gam_old,B = array(compose_tucker_ftr_vec(beta_old,G_old),
