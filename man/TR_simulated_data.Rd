@@ -26,7 +26,8 @@ the observational noise.}
 \item{num_active}{The number of contiguous nonzero activation regions}
 
 \item{other_covar}{A vector of true values for other (nuisance) coefficients
-that will be used to generate non-tensor-valued covariates}
+that will be used to generate non-tensor-valued covariates. This can be set
+to \code{NULL} if no other covariates are desired in the simulated data.}
 }
 \value{
 An object of class \code{TR_data} that contains the

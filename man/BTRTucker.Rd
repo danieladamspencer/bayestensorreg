@@ -9,6 +9,7 @@ BTRTucker(
   ranks = rep(1, length(dim(input$X)) - 1),
   n_iter = 100,
   n_burn = 0,
+  CP = FALSE,
   hyperparameters = NULL,
   save_dir = NULL
 )
@@ -26,6 +27,8 @@ desired number of ranks per dimension of the tensor coefficient}
 
 \item{n_burn}{(a scalar) the number of posterior samples to discard as a
 burn-in}
+
+\item{CP}{Should the model be reduced to the CP decomposition? Default: FALSE}
 
 \item{hyperparameters}{a list with the (scalar) elements \code{a.tau},
 \code{b.tau}, \code{a.lam}, \code{b.lam}, \code{nu}, \code{s_02},

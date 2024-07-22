@@ -46,9 +46,12 @@ FTRTucker <-
   if(!is.null(input$eta)) {
     gam_lm <- lm(input$y ~ -1 + input$eta)
     llik <- c(logLik(gam_lm))
-    cat("Log-likelihood without tensor:",llik,"\n")
     gam_new <- gam_lm$coefficients
-  } else {gam_new <- NULL}
+  } else {
+    gam_new <- NULL
+    llik <- sum(dnorm(input$y, mean = mean(input$y), sd = sd(input$y), log = TRUE))
+  }
+  cat("Log-likelihood without tensor:",llik,"\n")
 
   beta_new <- mapply(function(p_j,r_j) {
     out <- matrix(rnorm(p_j*r_j,sd = 0.025),p_j,r_j)

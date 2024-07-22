@@ -32,6 +32,6 @@ Frequentist Tensor Regression with the CP decomposition
 \examples{
 \dontrun{
 input <- TR_simulated_data()
-results <- FTR_CP(input$y, input$X, input$eta)
+results <- FTR_CP(input)
 }
 }
